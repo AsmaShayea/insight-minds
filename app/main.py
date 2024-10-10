@@ -132,12 +132,6 @@ business_id = "66eb726e1b898c92f06c243f"
 
 @app.get('/reviews/{business_id}')
 def get_reviews(business_id: str):
-    start_time = time.time()
-
-    # Get business details
-    business = business_collection.find_one({"_id": ObjectId(business_id)})
-    if not business:
-        return JSONResponse(content={"error": "Business not found"}, status_code=404)
 
     # Get reviews for the business
     reviews = list(reviews_collection.find({"business_id": business_id}))
@@ -148,7 +142,7 @@ def get_reviews(business_id: str):
     neutral_reviews = []
 
     for review in reviews:
-        review_start_time = time.time()
+        # review_start_time = time.time()
 
         # Get aspects for the review
         aspects = list(aspects_collection.find({"review_id": review['review_id']}))
@@ -187,7 +181,7 @@ def get_reviews(business_id: str):
         review_data = {
             "review_text": review_text,  # Use the modified review text
             "rating": rating,
-            "name": business['name'],
+            "name": "",
             "date": review['review_datetime_utc'],
             "review_type": review_type,
             "aspects": aspect_details  # Include aspects and their polarities
@@ -201,8 +195,8 @@ def get_reviews(business_id: str):
         else:
             neutral_reviews.append(review_data)
 
-        review_duration = time.time() - review_start_time
-        print(f"Processed review in {review_duration:.2f} seconds")
+        # review_duration = time.time() - review_start_time
+        # print(f"Processed review in {review_duration:.2f} seconds")
 
     # Prepare the final response with the separated reviews
     result = JSONResponse(content={
@@ -215,8 +209,8 @@ def get_reviews(business_id: str):
         }
     })
 
-    total_duration = time.time() - start_time
-    print(f"Total request time: {total_duration:.2f} seconds")
+    # total_duration = time.time() - start_time
+    # print(f"Total request time: {total_duration:.2f} seconds")
 
     return result
 
