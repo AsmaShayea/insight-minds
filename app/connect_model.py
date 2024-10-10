@@ -1,10 +1,10 @@
 import json
 from ibm_watson_machine_learning.foundation_models import Model
-from config import WATSON_CREDENTIALS, PROJECT_ID  # Import credentials
+from .config import WATSON_CREDENTIALS, PROJECT_ID  # Import credentials
 
 def pretty(data):
     return json.dumps(data, indent=4)
-    
+
 model_id = "sdaia/allam-1-13b-instruct"
 
 # Load the model with error handling
