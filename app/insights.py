@@ -4,8 +4,6 @@ import pandas as pd
 from .database import get_database
 from bson.objectid import ObjectId
 from collections import defaultdict, Counter
-import jsonify
-import json
 # Initialize collections
 db = get_database()
 if db is not None:
@@ -18,14 +16,6 @@ else:
     aspects_collection = None
     business_collection = None
     errors_log_collection = None
-
-
-def dd(var):
-    # Return the data as a JSON response and stop further execution
-    response = jsonify(var)
-    response.status_code = 200
-    return response  # Execution stops here
-
 
 
 # Helper function to calculate sentiment percentages (from the previous code)
