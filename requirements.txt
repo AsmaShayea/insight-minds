@@ -4,4 +4,3 @@ pymongo
 ibm-watson-machine-learning
 outscraper
 python-dotenv
-jsonify
