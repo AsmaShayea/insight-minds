@@ -149,7 +149,6 @@ def get_top_aspects_and_opinions():
         # Append opinions (if available) for each aspect
         if 'opinions' in aspect:
             opinions = aspect['opinions']
-            val = opinions
 
             if polarity == "positive":
                 positive_aspects[original_aspect] += 1
@@ -187,7 +186,6 @@ def get_top_aspects_and_opinions():
 
     # Step 4: Return both positive and negative results
     return {
-        'val': text,
         'top_positive_aspects': positive_results,
         'top_negative_aspects': negative_results
     }
