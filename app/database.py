@@ -13,7 +13,7 @@ def get_database():
     Return the database object after successfully connecting.
     """
     try:
-        client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+        client = MongoClient("mongodb+srv://asma:Sami8407@insightsmindscluster0.34evged.mongodb.net/?retryWrites=true&w=majority&appName=InsightsMindsCluster0", server_api=ServerApi('1'))
         client.admin.command('ping')  # Ping MongoDB to confirm a successful connection
         logger.info("Pinged your deployment. Successfully connected to MongoDB!")
         
