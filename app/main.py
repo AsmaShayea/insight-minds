@@ -50,7 +50,7 @@ def get_reviews(business_id: str):
         return {"error": "Business not found"}
     
     # Get reviews for the business
-    reviews = list(reviews_collection.find({"business_id": business_id}))
+    reviews = list(reviews_collection.find({"business_id": business_id}).limit(50))
 
 
     # Initialize separate arrays for positive, negative, and neutral reviews
@@ -100,12 +100,12 @@ def get_reviews(business_id: str):
 
         # Prepare the review data
         review_data = {
-            # "review_text": review_text,  # Use the modified review text
-            # "rating": rating,
+            "review_text": review_text,  # Use the modified review text
+            "rating": rating,
             "name": business['name'],
-            # "date": review['review_datetime_utc'],
-            # "review_type": review_type,
-            # "aspects": aspect_details  # Include aspects and their polarities
+            "date": review['review_datetime_utc'],
+            "review_type": review_type,
+            "aspects": aspect_details  # Include aspects and their polarities
         }
 
 
