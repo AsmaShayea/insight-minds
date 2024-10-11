@@ -100,12 +100,12 @@ def get_reviews(business_id: str):
 
         # Prepare the review data
         review_data = {
-            "review_text": review_text,  # Use the modified review text
-            "rating": rating,
+            # "review_text": review_text,  # Use the modified review text
+            # "rating": rating,
             "name": business['name'],
-            "date": review['review_datetime_utc'],
-            "review_type": review_type,
-            "aspects": aspect_details  # Include aspects and their polarities
+            # "date": review['review_datetime_utc'],
+            # "review_type": review_type,
+            # "aspects": aspect_details  # Include aspects and their polarities
         }
 
 
