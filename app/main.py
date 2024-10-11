@@ -4,7 +4,6 @@ from .database import get_database
 from fastapi.responses import JSONResponse
 from bson.objectid import ObjectId
 from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments, get_top_aspects_and_opinions, get_aspect_counts_by_month
-from fastapi import BackgroundTasks
 
 app = FastAPI()
 
@@ -43,11 +42,7 @@ else:
 business_id = "66eb726e1b898c92f06c243f"
 #/reviews/66eb726e1b898c92f06c243f
 @app.get('/reviews/{business_id}')
-async def get_reviews(business_id: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(long_running_task, business_id)  # Add the long-running task
-    return {"message": "Your request is being processed, please check back later."}
-
-def get_relong_running_taskviews(business_id: str):
+def get_reviews(business_id: str):
     # Get business details
     business = business_collection.find_one({"_id": ObjectId(business_id)})
 
