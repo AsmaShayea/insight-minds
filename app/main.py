@@ -104,6 +104,7 @@ def get_reviews(business_id: str):
             "review_text": review_text,
             "rating": rating,
             "name": business['name'],
+            "image": "https://i.ibb.co/0Bsq8MC/user-image.png",
             "date": review['review_datetime_utc'],
             "review_type": review_type,
             "aspects": aspect_details
