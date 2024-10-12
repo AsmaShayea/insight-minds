@@ -139,17 +139,17 @@ def getInsights():
             "topicOpinions": get_top_aspects_and_opinions(),
             "get_aspect_counts_by_month": get_aspect_counts_by_month(),
             "overall_review_tone": {
-                "Happy": "20",
-                "Angry": "10",
-                "Satisfied": "30",
-                "Disappointed": "10",
-                "Excited": "30"
+                "Happy": 20,
+                "Angry": 10,
+                "Satisfied": 30,
+                "Disappointed": 10,
+                "Excited": 30
             },
             "get_category_sentiment": [
-                {"category": "Product", "positive": "50%", "negative": "50%"},
-                {"category": "Service", "positive": "80%", "negative": "20%"},
-                {"category": "Place", "positive": "90%", "negative": "10%"},
-                {"category": "Price", "positive": "30%", "negative": "70%"}
+                {"category": "Product", "positive": 50, "negative": 50},
+                {"category": "Service", "positive": 80, "negative": 20},
+                {"category": "Place", "positive": 90, "negative": 10},
+                {"category": "Price", "positive": 30, "negative": 70}
             ]
         }
     })
