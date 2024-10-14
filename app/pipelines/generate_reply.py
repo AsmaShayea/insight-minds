@@ -35,7 +35,6 @@ def setup_summary_vector_store():
 async def generate_reply(review_id):
     try:
         review = reviews_collection.find_one({"_id": ObjectId(review_id)})
-        business = business_collection.find_one({"_id": ObjectId(review['business_id'])})
         
         retriever = setup_summary_vector_store()
         
@@ -43,7 +42,6 @@ async def generate_reply(review_id):
         Generate a reply from the business owner to the customer review following these steps:
 
         - Make it as short as possible and directly related to the review, without unnecessary details.
-        - Consider that this business is a {business['category']}.
         - The reply should follow the same style that the owner always uses.
         - The response must be related to the review.
         - The reply must be a maximum of 100 characters unless it is important.
