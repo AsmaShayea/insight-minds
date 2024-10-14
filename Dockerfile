@@ -1,4 +1,5 @@
-FROM python:3.12
+# Use the official Python 3.12 image as a base
+FROM python:3.12-alpine
 
 # Set a working directory
 WORKDIR /app
