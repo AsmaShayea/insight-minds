@@ -34,30 +34,30 @@ def setup_summary_vector_store():
 
 async def generate_reply(review_id):
     try:
-        review = reviews_collection.find_one({"_id": ObjectId(review_id)})
+        # review = reviews_collection.find_one({"_id": ObjectId(review_id)})
         
-        retriever = setup_summary_vector_store()
+        # retriever = setup_summary_vector_store()
         
-        prompt_template = f"""
-        Generate a reply from the business owner to the customer review following these steps:
+        # prompt_template = f"""
+        # Generate a reply from the business owner to the customer review following these steps:
 
-        - Make it as short as possible and directly related to the review, without unnecessary details.
-        - The reply should follow the same style that the owner always uses.
-        - The response must be related to the review.
-        - The reply must be a maximum of 100 characters unless it is important.
-        - Reply in the same language as the review, and do not include any text in a different language.
-        - Avoid repeating general phrases or adding filler content.
-        - Do not add any hashtag or mention
-        - Follow the output of the example below.
+        # - Make it as short as possible and directly related to the review, without unnecessary details.
+        # - The reply should follow the same style that the owner always uses.
+        # - The response must be related to the review.
+        # - The reply must be a maximum of 100 characters unless it is important.
+        # - Reply in the same language as the review, and do not include any text in a different language.
+        # - Avoid repeating general phrases or adding filler content.
+        # - Do not add any hashtag or mention
+        # - Follow the output of the example below.
 
-        Example :
-        input: نجمتين لاني فعلا احب قهوتهم خصوصا الفلات وايت وساندوتش الحلومي اللي عندهم ودايم اطلب منهم عن طريق احد تطبيقات التوصيل رغم كثرة الكافيهات القريبه حولي بالدمام … ولكن الطلب الاخير وصلني بطريقه بشعه جدا ماتوقعتها منهم ولا اتوقع انها ترضي ادارة كافيه محترم له سمعته … اين ادارة الجوده … الساندوتش وصلني يابس و محروق واضح بالصور رغم محاولات ازاله الطبقه المحروقه والقهوه وصلت والغطا مش نظيف مشروبي فلات وايت ولا اعلم سبب وجود هذا السائل الاحمر ؟؟!!! … اتمنى من الاداره اتخاذ الاجراءات اللازمه لعدم تكرار هذا مع زبائن اخرين
-        output: نحن نقدر تقييمك ونأسف اذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا. 
-        Example_END
+        # Example :
+        # input: نجمتين لاني فعلا احب قهوتهم خصوصا الفلات وايت وساندوتش الحلومي اللي عندهم ودايم اطلب منهم عن طريق احد تطبيقات التوصيل رغم كثرة الكافيهات القريبه حولي بالدمام … ولكن الطلب الاخير وصلني بطريقه بشعه جدا ماتوقعتها منهم ولا اتوقع انها ترضي ادارة كافيه محترم له سمعته … اين ادارة الجوده … الساندوتش وصلني يابس و محروق واضح بالصور رغم محاولات ازاله الطبقه المحروقه والقهوه وصلت والغطا مش نظيف مشروبي فلات وايت ولا اعلم سبب وجود هذا السائل الاحمر ؟؟!!! … اتمنى من الاداره اتخاذ الاجراءات اللازمه لعدم تكرار هذا مع زبائن اخرين
+        # output: نحن نقدر تقييمك ونأسف اذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا. 
+        # Example_END
 
-        Now generate a short response for the following review:
-        {review['review_text']}
-        """
+        # Now generate a short response for the following review:
+        # {review['review_text']}
+        # """
 
         # qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
         # response = qa.run(prompt_template)
