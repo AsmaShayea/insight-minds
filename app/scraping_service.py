@@ -35,7 +35,7 @@ def scrape_reviews():
     try:
         results = api_client.google_maps_reviews(
             'ChIJvQOWKnDpST4RYKCGnwam1GE', 
-            reviews_limit=5000, 
+            reviews_limit=100000, 
             ignore_empty=True,
             language='ar'
         )

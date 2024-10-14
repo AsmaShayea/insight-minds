@@ -4,7 +4,9 @@ from fastapi.responses import JSONResponse
 from bson.objectid import ObjectId
 from .database import get_database
 from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments, get_top_aspects_and_opinions, get_aspect_counts_by_month
-
+from .pipelines.insights_extractions import generate_insights_text
+from .pipelines.generate_reply import generate_reply
+from .global_methods import wrap_words_with_span
 app = FastAPI()
 
 # Define the origins that are allowed to make requests to your API
@@ -22,15 +24,14 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-# Sample root endpoint
-@app.get("/")
-def read_root():
-    return {"Hello": "World13"}
+from bson import ObjectId
 
-# Sample scrape reviews endpoint
-@app.get("/scrape-reviews")
-def scrape_google_reviews():
-    return {"Hello": "World15"}
+def serialize_doc(doc):
+    if isinstance(doc, ObjectId):
+        return str(doc)
+    if isinstance(doc, dict):
+        return {k: serialize_doc(v) for k, v in doc.items()}
+    return doc
 
 # Initialize collections
 db = get_database()
@@ -38,12 +39,78 @@ if db is not None:
     reviews_collection = db['reviews']
     aspects_collection = db['aspects']
     business_collection = db['business']
+    insights_collection = db['insights']
     errors_log_collection = db['errors_log']
 else:
     reviews_collection = None
     aspects_collection = None
     business_collection = None
+    insights_collection = None
     errors_log_collection = None
+
+# Sample root endpoint
+@app.get("/")
+def read_root():
+    return {"Hello": "World13"}
+
+
+# Get reply
+@app.get("/get-reply/{review_id}")
+async def get_reply(review_id: str):
+    reply = await generate_reply(review_id)
+    return {"reply": reply}
+    
+
+@app.get("/generate-text-insights/{business_id}")
+async def generate_insights(business_id: str):
+    """
+    Endpoint to run the pipeline for generating business insights.
+    """
+    try:
+        response = generate_insights_text(business_id)  # Call the run_pipeline function
+        return {"status": "success", "data": response}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+#get insights
+@app.get("/get-last-insight")
+async def get_latest_insights():
+    # Get the last document based on the extraction_date
+    last_document = insights_collection.find().limit(1)
+    
+    # Convert the cursor to a list and check if there's a document
+    last_insight = list(last_document)
+    
+    if last_insight:
+        return {
+            "id" : str(last_insight[0]['_id']),
+            "data": last_insight[0]['data']
+        }
+    
+    return JSONResponse(content={"message": "No insights found."}, status_code=404)
+
+#get insights
+@app.get("/get-business-details/{business_id}")
+async def get_business_details(business_id):
+    # Get the last document based on the extraction_date
+    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
+    
+    # Convert the cursor to a list and check if there's a document
+    
+    return {
+        "id" : str(business_data['_id']),
+        "name": business_data['name'],
+        "full_address": business_data['full_address'],
+        "city": business_data['city'],
+        "description": business_data['description'],
+        "logo": business_data['logo'],
+        "category": business_data['category'],
+        "type": business_data['type'],
+        "subtypes": business_data['subtypes']
+
+    }
+    
 
 # Get All Reviews
 @app.get('/reviews/{business_id}')
@@ -101,12 +168,14 @@ def get_reviews(business_id: str):
             review_type = 'Negative'
 
         review_data = {
+            "id": str(review['_id']),
             "review_text": review_text,
             "rating": rating,
             "name": business['name'],
             "image": "https://i.ibb.co/0Bsq8MC/user-image.png",
             "date": review['review_datetime_utc'],
             "review_type": review_type,
+            "tokenized_review": wrap_words_with_span(review_text),
             "aspects": aspect_details
         }
 
@@ -154,3 +223,11 @@ def getInsights():
         }
     })
     return result
+
+
+
+#Realtime Scrape & get insights
+# Sample scrape reviews endpoint
+@app.get("/scrape-reviews")
+def scrape_google_reviews():
+    return {"Hello": "World15"}
