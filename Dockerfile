@@ -12,10 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./app ./app
 
 # Copy the start script into the container
-COPY ./start.sh ./
+COPY ./start.sh ./  # Ensure it copies to the working directory
 
 # Make the start script executable
-RUN chmod +x ./start.sh
+RUN chmod +x start.sh  # Adjust if necessary to ensure executable
 
 # Set the command to run the start script
-CMD ["sh", "/app/start.sh"]
+CMD ["sh", "start.sh"]  # Use `sh` to execute the script
