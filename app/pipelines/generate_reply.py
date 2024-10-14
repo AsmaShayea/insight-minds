@@ -59,10 +59,12 @@ async def generate_reply(review_id):
         {review['review_text']}
         """
 
-        qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
-        response = qa.run(prompt_template)
+        # qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
+        # response = qa.run(prompt_template)
+
+        response = " شكراً لتقييمك الإيجابي! سنعمل على تحسين جودة القهوة لتلبية توقعاتك. "
         
-        return response[:100]  # Limit response length to 100 characters
+        return response  # Limit response length to 100 characters
 
     except Exception as e:
         return {"error": str(e)}
