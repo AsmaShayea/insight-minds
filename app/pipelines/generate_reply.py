@@ -8,10 +8,9 @@ import re
 from datetime import datetime
 
 # Initialize the embeddings and vector store once
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
-vector_store = None
 reviews_collection = get_mongo_connection()['reviews']
 business_collection = get_mongo_connection()['business']
+vector_store = None
 
 def process_aspects():
     # Fetch replies from MongoDB
@@ -23,6 +22,7 @@ def process_aspects():
 
 def setup_summary_vector_store():
     global vector_store
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
     if vector_store is None:
         replies_data = process_aspects()
         documents = [
