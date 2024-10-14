@@ -1,12 +1,17 @@
 # Use the official Python 3.12 image as a base
 FROM python:3.12-alpine
 
-WORKDIR /app
+# Install FastAPI and Uvicorn
+RUN pip install fastapi uvicorn
 
-COPY . /app
+# Copy the start script into the container
+COPY ./start.sh /start.sh
 
-RUN pip install -r requirements.txt
+# Make the start script executable
+RUN chmod +x /start.sh
 
-EXPOSE 8000
+# Copy the app code into the container
+COPY ./app /app
 
-CMD ["python","manage.py","runserver","0.0.0.0:8000"]
+# Set the command to run the start script
+CMD ["./start.sh"]
