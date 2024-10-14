@@ -6,4 +6,3 @@ outscraper
 python-dotenv
 langchain
 langchain-community
-sentence-transformers
