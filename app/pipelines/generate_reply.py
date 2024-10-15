@@ -22,7 +22,7 @@ def process_aspects():
 
 def setup_summary_vector_store():
     global vector_store
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE",from_tf=True)
     if vector_store is None:
         replies_data = process_aspects()
         documents = [
