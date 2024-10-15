@@ -57,7 +57,7 @@ def read_root():
 # Get reply
 @app.get("/get-reply/{review_id}")
 async def get_reply(review_id: str):
-    reply = await generate_reply(review_id)
+    reply = generate_reply(review_id)
     return {"reply": reply}
     
 

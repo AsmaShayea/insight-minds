@@ -1,5 +1,5 @@
 from bson.objectid import ObjectId
-from app.model_manager import ModelSingleton
+from app.model_manager import ModelSingleton  # For handling MongoDB ObjectId
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
@@ -7,39 +7,39 @@ from app.database_manager import get_mongo_connection
 import re
 from datetime import datetime
 
-# Initialize the embeddings and vector store once
 reviews_collection = get_mongo_connection()['reviews']
-business_collection = get_mongo_connection()['business']
-vector_store = None
-
 def process_aspects():
-    # Fetch replies from MongoDB
-    replies_data = list(reviews_collection.find({
+    replies_data =list(reviews_collection.find({
         "owner_answer": {"$exists": True, "$ne": "", "$type": "string"}
     }, {"_id": 0}))
 
     return replies_data
 
-def setup_summary_vector_store():
-    global vector_store
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE",from_tf=True)
-    if vector_store is None:
-        replies_data = process_aspects()
-        documents = [
-            f"Review: {review['review_text']} Reply: {review['owner_answer']}" 
-            for review in replies_data
-        ]
-        vector_store = Chroma.from_texts(documents, embeddings)  
-    return vector_store.as_retriever()
 
-async def generate_reply(review_id):
-    try:
-        review = reviews_collection.find_one({"_id": ObjectId(review_id)})
-        business = business_collection.find_one({"_id": ObjectId(review['business_id'])})
-        
-        retriever = setup_summary_vector_store()
-        
-        prompt_template = f"""
+def setup_summary_vector_store():
+
+    replies_data = process_aspects()
+
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
+    # documents = [reply['owner_answer'] for reply in replies_data]  # Use owner_answer for embedding
+    documents = [
+    f"Review: {review['review_text']} Reply: {review['owner_answer']}" 
+    for review in replies_data
+    ]
+    # Create a Chroma vector store from the owner replies
+    vector_store = Chroma.from_texts(documents, embeddings)  # Embedding owner_answer instead of review_text
+    retriever = vector_store.as_retriever()
+
+    return retriever
+
+
+def generate_reply(review_id):
+
+    review = reviews_collection.find_one({"_id": ObjectId(review_id)})
+    business = get_mongo_connection()['business'].find_one({"_id": ObjectId(review['business_id'])})
+    retriever = setup_summary_vector_store()
+
+    prompt_template = f"""
         Generate a reply from the business owner to the customer review following these steps:
 
         - Make it as short as possible and directly related to the review, without unnecessary details.
@@ -61,11 +61,8 @@ async def generate_reply(review_id):
         {review['review_text']}
         """
 
-        qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
-        response = qa.run(prompt_template)
-        
-        return response[:100]  # Limit response length to 100 characters
+    qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
+    response = qa.run(prompt_template)
 
-    except Exception as e:
-        return {"error": str(e)}
+    return response
 
