@@ -63,6 +63,8 @@ def generate_reply(review_id):
 
     qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
     response = qa.run(prompt_template)
+    # response = " شكراً لتقييمك الإيجابي! سنعمل على تحسين جودة القهوة.";
+
 
     return response
 

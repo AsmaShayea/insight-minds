@@ -13,6 +13,7 @@ app = FastAPI()
 origins = [
     "https://blogapp556.herokuapp.com",  # Your Next.js app's domain
     "http://localhost:3000",  # Local development domain for Next.js
+    "http://16.171.196.223:3000",
 ]
 
 # Add the CORS middleware to the FastAPI app
@@ -23,6 +24,14 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
 )
+
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    return response
 
 from bson import ObjectId
 
@@ -118,7 +127,7 @@ def get_reviews(business_id: str):
     # Get business details
     business = business_collection.find_one({"_id": ObjectId(business_id)})
     if not business:
-        return {"error": "Business not found"}
+        return {"error": business_id}
     
     # Get reviews for the business (limit to 50 reviews)
     reviews = list(reviews_collection.find({"business_id": business_id}).limit(50))
@@ -148,7 +157,7 @@ def get_reviews(business_id: str):
                 highlighted_aspect = aspect_str
 
             # Replace the aspect in the review text
-            review_text = review_text.replace(aspect_str, highlighted_aspect)
+            review_aspects_text = review_text.replace(aspect_str, highlighted_aspect)
 
             # Add the aspect details to the list
             if polarity in ["positive", "negative"]:
@@ -169,7 +178,7 @@ def get_reviews(business_id: str):
 
         review_data = {
             "id": str(review['_id']),
-            "review_text": review_text,
+            "review_text": review_aspects_text,
             "rating": rating,
             "name": review['author_name'],
             "logo": review['author_logo'],
