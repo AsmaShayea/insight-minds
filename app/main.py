@@ -7,6 +7,8 @@ from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments
 from .pipelines.insights_extractions import generate_insights_text
 from .pipelines.generate_reply import generate_reply
 from .global_methods import wrap_words_with_span
+from bson import ObjectId
+
 app = FastAPI()
 
 # Define the origins that are allowed to make requests to your API
@@ -19,21 +21,12 @@ origins = [
 # Add the CORS middleware to the FastAPI app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allows requests from specified domains
+    allow_origins=["*"],  # Allows requests from specified domains
     allow_credentials=True,
     allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
 )
 
-@app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = '*'
-    return response
-
-from bson import ObjectId
 
 def serialize_doc(doc):
     if isinstance(doc, ObjectId):

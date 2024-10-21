@@ -6,3 +6,4 @@ outscraper
 python-dotenv
 langchain
 langchain-community
+Request
