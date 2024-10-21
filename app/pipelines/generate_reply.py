@@ -35,10 +35,28 @@ def setup_summary_vector_store():
 
 def generate_reply(review_id):
 
+    # Fetch the review from the collection
     review = reviews_collection.find_one({"_id": ObjectId(review_id)})
+    
+    # Check if the review exists
+    if not review:
+        return f"Review with id {review_id} not found."
+
+    # Check if the review has a business_id field
+    if 'business_id' not in review:
+        return f"No business_id found in review {review_id}."
+
+    # Fetch the business associated with the review
     business = get_mongo_connection()['business'].find_one({"_id": ObjectId(review['business_id'])})
+
+    # Check if the business exists
+    if not business:
+        return f"Business with id {review['business_id']} not found."
+
+    # Set up the vector store
     retriever = setup_summary_vector_store()
 
+    # Create the prompt template for generating a reply
     prompt_template = f"""
         Generate a reply from the business owner to the customer review following these steps:
 
@@ -61,10 +79,10 @@ def generate_reply(review_id):
         {review['review_text']}
         """
 
+    # Initialize the retrieval QA system
     qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
+    
+    # Generate the response
     response = qa.run(prompt_template)
-    # response = " شكراً لتقييمك الإيجابي! سنعمل على تحسين جودة القهوة.";
-
 
     return response
-
