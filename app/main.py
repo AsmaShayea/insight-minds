@@ -302,12 +302,9 @@ async def get_business_details(business_id):
 
     }
     
-@app.get('/chan_rev')
-def chan_rev():
+@app.get('/test')
+def test():
 
-    reviews = list(reviews_collection.find())
-
-    handele_reviews_asepct_tags(reviews)
 
     return{"status":"Done"}
 
