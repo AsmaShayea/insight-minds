@@ -24,14 +24,14 @@ class ModelSingleton:
             model_id = "sdaia/allam-1-13b-instruct"
             credentials = { 
                 "url": os.getenv("WATSONX_URL", "https://eu-de.ml.cloud.ibm.com"), 
-                "apikey": os.getenv("WATSONX_APIKEY", "ltqRXYdJ4roJXzlXAoAkQpoX1HcNbTcrtLOUljZW3PBf")
+                "apikey": os.getenv("WATSONX_APIKEY", "Zrf8P_lX5EMBsrySSLlEmTRnIZZgZYfTeBreQ-aG43kD")
             }
             gen_parms = { 
                 "DECODING_METHOD": "greedy", 
                 "MIN_NEW_TOKENS": 1, 
                 "MAX_NEW_TOKENS": 1500
             }
-            project_id = os.getenv("WATSONX_PROJECT_ID", "f140f90d-331a-4c84-b266-c701f3525ea8")
+            project_id = os.getenv("WATSONX_PROJECT_ID", "94747490-17e0-4527-b930-c84d83e45349")
             
             # Initialize the model
             ModelSingleton._model = Model(model_id, credentials, gen_parms, project_id)

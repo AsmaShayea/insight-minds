@@ -21,6 +21,7 @@ origins = [
     "https://blogapp556.herokuapp.com",  # Your Next.js app's domain
     "http://localhost:3000",  # Local development domain for Next.js
     "http://16.171.196.223:3000",
+    "http://insights-mind-7646dfe71e1b.herokuapp.com",
 ]
 
 # Add the CORS middleware to the FastAPI app

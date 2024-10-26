@@ -8,3 +8,4 @@ langchain
 langchain-community
 camel_tools
 nltk
+MorphologyDB.builtin_db
