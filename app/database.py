@@ -25,7 +25,7 @@ def get_database():
         logger.info("Pinged your deployment. Successfully connected to MongoDB!")
         
         # Return the connected database
-        db = client['insight_minds4']
+        db = client['insight_minds']
         return db
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
