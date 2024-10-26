@@ -1,19 +1,19 @@
 from bson.objectid import ObjectId
-from app.model_manager import ModelSingleton  # For handling MongoDB ObjectId
+from app.model_singleton import ModelSingleton  # For handling MongoDB ObjectId
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
-from app.database_manager import get_mongo_connection
+from app.database import get_database
 import re
 from datetime import datetime
 
 # Get the most common positive and negative aspects separately, along with their sentiment and associated reviews
 def get_common_aspects_and_reviews():
-    aspects_collection = get_mongo_connection()['aspects']
-    # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, original_aspect, and polarity
+    aspects_collection = get_database()['aspects']
+    # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, root_aspect, and polarity
     pipeline = [
         {"$group": {
-            "_id": {"aspect": "$aspect", "original_aspect": "$original_aspect", "polarity": "$polarity"},  # Group by aspect, original_aspect, and polarity
+            "_id": {"aspect": "$aspect", "root_aspect": "$root_aspect", "polarity": "$polarity"},  # Group by aspect, root_aspect, and polarity
             "count": {"$sum": 1},  # Count occurrences
             "all_opinions": {"$push": "$opinions"}  # Collect associated opinions into an array
         }},
@@ -34,7 +34,7 @@ def process_aspects():
     retrieved_data = []
     for aspect_entry in positive_aspects + negative_aspects:
         aspect = aspect_entry['_id']['aspect']
-        original_aspect = aspect_entry['_id']['original_aspect']  # Retrieve original_aspect
+        root_aspect = aspect_entry['_id']['root_aspect']  # Retrieve root_aspect
         sentiment = aspect_entry['_id']['polarity']
         all_opinions = aspect_entry['all_opinions']  # Get all collected opinions arrays
         
@@ -44,7 +44,7 @@ def process_aspects():
         # Add to the final retrieved data structure
         retrieved_data.append({
             'aspect': aspect,
-            'original_aspect': original_aspect,
+            'root_aspect': root_aspect,
             'sentiment': sentiment,
             'count': aspect_entry['count'],  # Add the count of the aspect
             'all_opinions': flattened_opinions,  # Store all consolidated opinions in the final structure
@@ -54,7 +54,7 @@ def process_aspects():
 # Prepare summary prompt based on retrieved data
 def prepare_summary_prompt(business_id):
 
-    business = get_mongo_connection()['business'].find_one({"_id": ObjectId(business_id)})
+    business = get_database()['business'].find_one({"_id": ObjectId(business_id)})
     # Check if the business exists
     if not business:
         return "Business not found."
@@ -87,6 +87,7 @@ def setup_summary_vector_store():
     return vector_store
 
 # Generate insights text from the processed aspects
+# Generate insights text from the processed aspects
 def generate_insights_text(business_id):
     # Create the vector store from the retrieved data
     summary_vector_store = setup_summary_vector_store()
@@ -107,26 +108,27 @@ def generate_insights_text(business_id):
     ideas_pattern = r"3- أفكار:\n\n(.*)"
 
     # Extract sections
-    summary = re.search(summary_pattern, response, re.DOTALL).group(1).strip()
-    recommendations = re.search(recommendations_pattern, response, re.DOTALL).group(1).strip()
-    ideas = re.search(ideas_pattern, response, re.DOTALL).group(1).strip()
+    summary_match = re.search(summary_pattern, response, re.DOTALL)
+    recommendations_match = re.search(recommendations_pattern, response, re.DOTALL)
+    ideas_match = re.search(ideas_pattern, response, re.DOTALL)
 
-    # Create JSON object
+    # Replace newlines with <br> tags if sections are found
     extracted_data = {
-        "summary": summary,
-        "recommendations": recommendations,
-        "ideas": ideas
+        "summary": summary_match.group(1).strip().replace('\n', '<br>') if summary_match else "",
+        "recommendations": recommendations_match.group(1).strip().replace('\n', '<br>') if recommendations_match else "",
+        "ideas": ideas_match.group(1).strip().replace('\n', '<br>') if ideas_match else ""
     }
 
     current_datetime = datetime.now()
 
     insights_data = {
+        "business_id": business_id,
         "data": extracted_data,
         "extraction_date": current_datetime,
     }
-    
+
     try:
-        insights_collection = get_mongo_connection()['insights']
+        insights_collection = get_database()['insights']
         
         # Insert the data
         insights_id = insights_collection.insert_one(insights_data).inserted_id
@@ -139,10 +141,26 @@ def generate_insights_text(business_id):
     except Exception as e:
         print(f"Error occurred: {e}")
         return {"error": str(e)}
-
+    
+    # Create JSON object with catchy headings
+    extracted_data = {
+        "summary": f"""
+            <h3><strong>تجربة العملاء: تقييم شامل لنمط نمق كافيه</strong></h3>
+            {extracted_data['summary'].replace('\n', '<br>')}
+        """,
+        "recommendations": f"""
+            <h3><strong>تحسينات مقترحة: خطوات لتعزيز تجربة العملاء في نمق كافيه</strong></h3>
+            {extracted_data['recommendations'].replace('\n', '<br>')}
+        """,
+        "ideas": f"""
+            <h3><strong>أفكار مبتكرة: كيف يمكن أن نجذب المزيد من الزبائن إلى نمق كافيه؟</strong></h3>
+            {extracted_data['ideas'].replace('\n', '<br>')}
+        """
+    }
     # Return the response as JSON-compatible dictionary
     return {
         "insights_id": insights_id_str,
+        "business_id": business_id,
         "data": extracted_data,
         "extraction_date": current_datetime
     }

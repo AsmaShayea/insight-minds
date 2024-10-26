@@ -1,13 +1,18 @@
-from fastapi import FastAPI
+from fastapi import Body, FastAPI, HTTPException, BackgroundTasks
+from time import sleep
 from fastapi.middleware.cors import CORSMiddleware  # Import CORSMiddleware
 from fastapi.responses import JSONResponse
 from bson.objectid import ObjectId
 from .database import get_database
 from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments, get_top_aspects_and_opinions, get_aspect_counts_by_month
 from .pipelines.insights_extractions import generate_insights_text
-from .pipelines.generate_reply import generate_reply
-from .global_methods import wrap_words_with_span
+from .pipelines.generate_reply import generate_reply, get_instance, correct_reply
+from .processing_text import wrap_words_with_span
+from .pipelines.extract_aspects import extract_save_aspects
 from bson import ObjectId
+from .scrape_save_reviews import create_new_business
+import math
+from typing import Optional
 
 app = FastAPI()
 
@@ -27,14 +32,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-
-def serialize_doc(doc):
-    if isinstance(doc, ObjectId):
-        return str(doc)
-    if isinstance(doc, dict):
-        return {k: serialize_doc(v) for k, v in doc.items()}
-    return doc
-
 # Initialize collections
 db = get_database()
 if db is not None:
@@ -50,17 +47,164 @@ else:
     insights_collection = None
     errors_log_collection = None
 
+
+task_status = {}
+
+# Define your background task function
+def background_task(business_id: str, url: Optional[str] = None):
+
+    task_status[business_id] = "running"
+    try:
+
+        extract_save_aspects(business_id, url)  # Simulate a long-running task
+
+        # Simulate a background task (e.g., scraping)
+        print(f"Scraping {url} for business {business_id}")
+        task_status[business_id] = "completed"
+
+    except Exception as e:
+        # Mark task as failed if an error occurs
+        task_status[business_id] = "failed"
+        print(f"Error in task {business_id}: {e}")
+
+# Endpoint to start the background task
+@app.post("/scrape-extract-aspects")
+async def start_task(background_tasks: BackgroundTasks, url: Optional[str] = None):
+    business_id = create_new_business()  # Simulate creating a new business
+   
+    # Start the background task
+    background_tasks.add_task(background_task, business_id, url)
+    
+    # Return immediate response
+    return {"message": f"Business {business_id} started scraping {url}"}
+
+# Endpoint to start the background task
+@app.post("/scrape-extract-aspects/{business_id}")
+async def complete_task(background_tasks: BackgroundTasks, business_id: str, url: Optional[str] = None):
+    # Start the background task
+    background_tasks.add_task(background_task, business_id, url)
+    
+    # Return immediate response
+    return {"message": f"Business {business_id} started scraping {url}"}
+
+# Endpoint to check task status
+@app.get("/get-business-data/{business_id}")
+async def get_business_data(business_id: str):
+
+    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
+
+    if not business_data.get('progress_status'):
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    if(business_data['progress_status'] == "completed"):
+
+        return {
+            "progress_status": "active",
+            "business_data": {
+                "id": str(business_data["_id"]),  # Convert ObjectId to string
+                "category": business_data['category'],
+                "name": business_data['name'],
+                "logo": business_data['logo'],
+                "progress_status": business_data['progress_status']
+            }
+        }
+
+    else:
+
+        status = task_status.get(business_id, "not found")
+
+        if(status == "failed"):
+            return {
+                "progress_status": "error",
+                "message": "Task stopped for unrecognized error",
+                "progress_percentage": 0
+            }
+
+        else:
+            # Check if the task is completed
+            total_reviews = reviews_collection.count_documents({"business_id": business_id})
+            analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
+        
+
+            # Extracting the results
+            if total_reviews > 0:
+                progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
+            else:
+                progress_percentage = 0
+
+
+            return {
+                "progress_status": "in_progress",
+                "message": "",
+                "progress_percentage": progress_percentage
+            }
+
+
+# Helper function to serialize ObjectId to string and show only specific fields
+def serialize_business_data(business):
+    return {
+        "id": str(business["_id"]),  # Convert ObjectId to string
+        "category": business.get("category"),
+        "name": business.get("name"),
+        "logo": business.get("logo"),
+        "progress_status": business.get("progress_status")
+    }
+
+@app.get("/get-business-data")
+async def get_businesses_data():
+    try:
+        # Fetch only _id, name, and logo fields from the business collection
+        business_data = [
+            serialize_business_data(business) 
+            for business in business_collection.find({}, {"_id": 1, "category":1 , "name": 1, "logo": 1, "progress_status": 1})
+        ]
+        
+        if not business_data:
+            raise HTTPException(status_code=404, detail="No businesses found")
+        
+        return business_data  # FastAPI will convert it to JSON automatically
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# def serialize_doc(doc):
+#     if isinstance(doc, ObjectId):
+#         return str(doc)
+#     if isinstance(doc, dict):
+#         return {k: serialize_doc(v) for k, v in doc.items()}
+#     return doc
+
+
 # Sample root endpoint
 @app.get("/")
 def read_root():
     return {"Hello": "World13"}
 
 
+@app.get("/check_model_cash")
+def get_model_instance():
+    msg = get_instance()
+
+    return {"Hello": msg}
+
+
+@app.post("/correct-reply")
+async def correct_reply_endpoint(reply_text: str = Body(...)):
+    """Endpoint to correct a business owner's reply."""
+    corrected_reply = correct_reply(reply_text)
+    return {"corrected_reply": corrected_reply}
+
 # Get reply
 @app.get("/get-reply/{review_id}")
 async def get_reply(review_id: str):
-    reply = generate_reply(review_id)
-    return {"reply": reply}
+    try:
+        reply = generate_reply(review_id)
+        if reply:
+            return {"reply": reply}
+        else:
+            raise HTTPException(status_code=404, detail="Review not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 
 @app.get("/generate-text-insights/{business_id}")
@@ -68,11 +212,55 @@ async def generate_insights(business_id: str):
     """
     Endpoint to run the pipeline for generating business insights.
     """
-    try:
-        response = generate_insights_text(business_id)  # Call the run_pipeline function
-        return {"status": "success", "data": response}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    insights = insights_collection.find_one({"business_id": business_id})
+
+    if insights is None:
+        print("No insights found for the given business ID.")
+        try:
+            response = generate_insights_text(business_id)  # Call the run_pipeline function
+            return {"status": "success", "data": response}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    else:
+         # Create JSON object with catchy headings
+        extracted_data = {
+            "summary": {
+                "heading": "ملخص تجربة العملاء",
+                "content": insights['data']['summary']
+            },
+            "recommendations": {
+                "heading": "توصيات",
+                "content": insights['data']['recommendations']
+            },
+            "ideas": {
+                "heading": "أفكار مبتكرة",
+                "content": insights['data']['ideas']
+            }
+        }
+        extracted_data = {
+            "summary": f"""
+                <h3><strong>ملخص تجربة العملاء</strong></h3>
+                {insights['data']['summary'].replace('\n', '<br>')}
+            """,
+            "recommendations": f"""
+                <h3><strong>توصيات</strong></h3>
+                {insights['data']['recommendations'].replace('\n', '<br>')}
+            """,
+            "ideas": f"""
+                <h3><strong>أفكار مبتكرة</strong></h3>
+                {insights['data']['ideas'].replace('\n', '<br>')}
+            """
+        }
+        return {
+            "status": "success", 
+            "data": {
+                "insights_id": str(insights['_id']),  # Convert ObjectId to string for JSON serialization
+                "business_id": insights['business_id'],
+                "data": extracted_data,
+                "extraction_date": insights['extraction_date'],
+            }
+        }
 
 
 #get insights

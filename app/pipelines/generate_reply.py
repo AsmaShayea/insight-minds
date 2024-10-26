@@ -1,70 +1,53 @@
+# File: app/generate_reply.py
+
 from bson.objectid import ObjectId
-from app.model_manager import ModelSingleton  # For handling MongoDB ObjectId
 from langchain.chains import RetrievalQA
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
-from app.database_manager import get_mongo_connection
-import re
-from datetime import datetime
+from app.vector_store_cache import VectorStoreCache
+from app.database import get_database
+from app.model_singleton import ModelSingleton
 
-reviews_collection = get_mongo_connection()['reviews']
-def process_aspects():
-    replies_data =list(reviews_collection.find({
-        "owner_answer": {"$exists": True, "$ne": "", "$type": "string"}
-    }, {"_id": 0}))
+# Fetch the MongoDB collection
+reviews_collection = get_database()['reviews']
 
-    return replies_data
-
-
-def setup_summary_vector_store():
-
-    replies_data = process_aspects()
-
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
-    # documents = [reply['owner_answer'] for reply in replies_data]  # Use owner_answer for embedding
-    documents = [
-    f"Review: {review['review_text']} Reply: {review['owner_answer']}" 
-    for review in replies_data
-    ]
-    # Create a Chroma vector store from the owner replies
-    vector_store = Chroma.from_texts(documents, embeddings)  # Embedding owner_answer instead of review_text
-    retriever = vector_store.as_retriever()
-
-    return retriever
-
+def get_instance():
+    message = ""
+    if ModelSingleton._instance is None:
+        message = "Initializing WatsonxLLM model..."
+        # Initialize the model...
+    else:
+        message = "Reusing cached WatsonxLLM model..."
+    return message
 
 def generate_reply(review_id):
-
+    """Generates a reply based on a review using a cached model and vector store."""
+    
     # Fetch the review from the collection
     review = reviews_collection.find_one({"_id": ObjectId(review_id)})
     
-    # Check if the review exists
     if not review:
         return f"Review with id {review_id} not found."
 
-    # Check if the review has a business_id field
     if 'business_id' not in review:
         return f"No business_id found in review {review_id}."
 
-    # Fetch the business associated with the review
-    business = get_mongo_connection()['business'].find_one({"_id": ObjectId(review['business_id'])})
+    # Fetch business information
+    business = get_database()['business'].find_one({"_id": ObjectId(review['business_id'])})
 
-    # Check if the business exists
     if not business:
         return f"Business with id {review['business_id']} not found."
 
-    # Set up the vector store
-    retriever = setup_summary_vector_store()
+    # Use the cached retriever
+    retriever = VectorStoreCache.get_retriever()
 
-    # Create the prompt template for generating a reply
+    # Prepare the prompt for response generation
     prompt_template = f"""
         Generate a reply from the business owner to the customer review following these steps:
 
         - Make it as short as possible and directly related to the review, without unnecessary details.
         - Consider that this business is a {business['category']}.
-        - The reply should follow the same style that the owner always uses.
+        - The reply should follow the same style, words and pahses that the owner always uses.
         - The response must be related to the review.
-        - The reply must be a maximum of 100 characters unless it is important.
+        - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to ecalrify.
         - Reply in the same language as the review, and do not include any text in a different language.
         - Avoid repeating general phrases or adding filler content.
         - Do not add any hashtag or mention
@@ -79,10 +62,38 @@ def generate_reply(review_id):
         {review['review_text']}
         """
 
-    # Initialize the retrieval QA system
+    # Use the cached WatsonxLLM model
     qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
     
     # Generate the response
     response = qa.run(prompt_template)
+
+    return response
+
+
+def correct_reply(reply_text):
+
+   # Prepare the prompt for response generation
+    prompt_template = f"""
+
+    Correct the following text by check any grammer or spelling errors:
+    - Ensure that the reply is in the same language as the input_reply.
+    - Just correct without any further text.
+    - Follow the example format provided below and response with just the output.
+
+    Example:
+    input: نحن نقدر تييمك ونوسف اذا لم تكن رضياً بشكل كاملسنعمل جاهدين علي تحسين خدماتنا.
+    output: نحن نقدر تقييمك ونأسف إذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا.
+    Example_END
+
+    Now, give the output of correcting the following input:
+    input: {reply_text}
+    output:
+    """
+
+   
+    model = ModelSingleton.get_model()
+    # Generate the response
+    response = model.generate(prompt_template)['results'][0]['generated_text']
 
     return response

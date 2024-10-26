@@ -1,8 +1,8 @@
 # def get_common_aspects_and_reviews(aspects_collection):
-#     # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, original_aspect, and polarity
+#     # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, root_aspect, and polarity
 #     pipeline = [
 #         {"$group": {
-#             "_id": {"aspect": "$aspect", "original_aspect": "$original_aspect", "polarity": "$polarity"},  # Group by aspect, original_aspect, and polarity
+#             "_id": {"aspect": "$aspect", "root_aspect": "$root_aspect", "polarity": "$polarity"},  # Group by aspect, root_aspect, and polarity
 #             "count": {"$sum": 1},  # Count occurrences
 #             "all_opinions": {"$push": "$opinions"}  # Collect associated opinions into an array
 #         }},
@@ -19,7 +19,7 @@
 #     retrieved_data = []
 #     for aspect_entry in positive_aspects + negative_aspects:
 #         aspect = aspect_entry['_id']['aspect']
-#         original_aspect = aspect_entry['_id']['original_aspect']  # Retrieve original_aspect
+#         root_aspect = aspect_entry['_id']['root_aspect']  # Retrieve root_aspect
 #         sentiment = aspect_entry['_id']['polarity']
 #         all_opinions = aspect_entry['all_opinions']  # Get all collected opinions arrays
         
@@ -28,28 +28,10 @@
         
 #         # Add to the final retrieved data structure
 #         retrieved_data.append({
-#             'original_aspect': original_aspect,
+#             'root_aspect': root_aspect,
 #             'sentiment': sentiment,
 #             'all_opinions': flattened_opinions,  # Store all consolidated opinions in the final structure
 #         })
 #     return retrieved_data
 
 
-import re
-
-def wrap_words_with_span(text):
-    # Regular expression to match words of 2 or more characters
-    words = re.findall(r'\S+', text)  # \S+ matches any sequence of non-whitespace characters
-
-    wrapped_text = ''
-    
-    for word in words:
-        # Use regular expression to remove punctuation from word
-        cleaned_word = re.sub(r'[^\w\s]', '', word)
-
-        if len(cleaned_word) > 1:  # Only wrap words that have more than 1 letter
-            wrapped_text += f"<span>{word}</span> "
-        else:
-            wrapped_text += word + ' '
-
-    return wrapped_text.strip()

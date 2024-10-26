@@ -6,4 +6,5 @@ outscraper
 python-dotenv
 langchain
 langchain-community
-Request
+camel_tools
+nltk

@@ -5,6 +5,7 @@ from .database import get_database
 from bson.objectid import ObjectId
 from collections import defaultdict, Counter
 # Initialize collections
+
 db = get_database()
 if db is not None:
     reviews_collection = db['reviews']
@@ -82,7 +83,7 @@ def getOveralSentiment():
 
 
 def group_aspects_and_calculate_sentiments():
-    # Step 1: Group by original_aspect and count occurrences
+    # Step 1: Group by root_aspect and count occurrences
     aspects_data = aspects_collection.find({
     "polarity": { 
         "$nin": ["mixed", "neutral"] 
@@ -94,14 +95,14 @@ def group_aspects_and_calculate_sentiments():
     
     # Group aspects and count occurrences
     for aspect in aspects_data:
-        original_aspect = aspect['original_aspect']
+        root_aspect = aspect['root_aspect']
         polarity = aspect['polarity']
         
-        # Increment the count for each original_aspect
-        aspect_count[original_aspect] += 1
+        # Increment the count for each root_aspect
+        aspect_count[root_aspect] += 1
         
-        # Track sentiment counts for each original_aspect
-        aspect_sentiments[original_aspect][polarity] += 1
+        # Track sentiment counts for each root_aspect
+        aspect_sentiments[root_aspect][polarity] += 1
     
     # Step 2: Find the top 4 most popular aspects based on count
     most_popular_aspects = Counter(aspect_count).most_common(4)
@@ -143,7 +144,7 @@ def get_top_aspects_and_opinions():
 
     # Group aspects by polarity
     for aspect in aspects_data:
-        original_aspect = aspect['original_aspect']
+        root_aspect = aspect['root_aspect']
         polarity = aspect['polarity']
 
         # Append opinions (if available) for each aspect
@@ -151,15 +152,15 @@ def get_top_aspects_and_opinions():
             opinions = aspect['opinions']
 
             if polarity == "positive":
-                positive_aspects[original_aspect] += 1
+                positive_aspects[root_aspect] += 1
                 text = ', '.join([f"{item}" for item in opinions])
-                # positive_opinions[original_aspect].extend(text)
-                positive_opinions[original_aspect].append(text)
+                # positive_opinions[root_aspect].extend(text)
+                positive_opinions[root_aspect].append(text)
             elif polarity == "negative":
-                negative_aspects[original_aspect] += 1
+                negative_aspects[root_aspect] += 1
                 text = ', '.join([f"{item}" for item in opinions])
-                # negative_opinions[original_aspect].extend(text)
-                negative_opinions[original_aspect].append(text)
+                # negative_opinions[root_aspect].extend(text)
+                negative_opinions[root_aspect].append(text)
 
     # Step 2: Find the top 3 most popular positive and negative aspects
     top_positive_aspects = Counter(positive_aspects).most_common(3)
