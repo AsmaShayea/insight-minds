@@ -9,7 +9,11 @@ from datetime import datetime
 
 # Get the most common positive and negative aspects separately, along with their sentiment and associated reviews
 def get_common_aspects_and_reviews():
+<<<<<<< HEAD
     aspects_collection = get_database()['aspects']
+=======
+    aspects_collection = get_mongo_connection()['aspects']
+>>>>>>> c4d58e9 (ok)
     # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, root_aspect, and polarity
     pipeline = [
         {"$group": {
