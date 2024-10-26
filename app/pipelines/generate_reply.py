@@ -72,6 +72,7 @@ def generate_reply(review_id):
 
 
 def correct_reply(reply_text):
+    print("reply_text", reply_text)
 
    # Prepare the prompt for response generation
     prompt_template = f"""
@@ -93,6 +94,7 @@ def correct_reply(reply_text):
 
    
     model = ModelSingleton.get_model()
+    print(prompt_template)
     # Generate the response
     response = model.generate(prompt_template)['results'][0]['generated_text']
 
