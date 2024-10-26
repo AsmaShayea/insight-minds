@@ -8,7 +8,7 @@ from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments
 from .pipelines.insights_extractions import generate_insights_text
 from .pipelines.generate_reply import generate_reply, get_instance, correct_reply
 from .processing_text import wrap_words_with_span
-from .pipelines.extract_aspects import extract_save_aspects
+from .pipelines.extract_aspects import extract_save_aspects, handele_reviews_asepct_tags
 from bson import ObjectId
 from .scrape_save_reviews import create_new_business
 import math
@@ -302,6 +302,15 @@ async def get_business_details(business_id):
 
     }
     
+@app.get('/chan_rev')
+def chan_rev():
+
+    reviews = list(reviews_collection.find())
+
+    handele_reviews_asepct_tags(reviews)
+
+    return{"status":"Done"}
+
 
 # Get All Reviews
 @app.get('/reviews/{business_id}')
@@ -330,16 +339,16 @@ def get_reviews(business_id: str):
             polarity_score = aspect['polarity_score']
             polarity = aspect['polarity']
 
-            # Color-code the aspects
-            if polarity == 'positive':
-                highlighted_aspect = f"<span style='color: green;'>{aspect_str}</span>"
-            elif polarity == 'negative':
-                highlighted_aspect = f"<span style='color: red;'>{aspect_str}</span>"
-            else:
-                highlighted_aspect = aspect_str
+            # # Color-code the aspects
+            # if polarity == 'positive':
+            #     highlighted_aspect = f"<span style='color: green;'>{aspect_str}</span>"
+            # elif polarity == 'negative':
+            #     highlighted_aspect = f"<span style='color: red;'>{aspect_str}</span>"
+            # else:
+            #     highlighted_aspect = aspect_str
 
-            # Replace the aspect in the review text
-            review_aspects_text = review_text.replace(aspect_str, highlighted_aspect)
+            # # Replace the aspect in the review text
+            # review_aspects_text = review_text.replace(aspect_str, highlighted_aspect)
 
             # Add the aspect details to the list
             if polarity in ["positive", "negative"]:
@@ -360,14 +369,15 @@ def get_reviews(business_id: str):
 
         review_data = {
             "id": str(review['_id']),
-            "review_text": review_aspects_text,
+            "clean_review_text": review['review_text'],
+            "review_text": review['review_aspects_text'],
             "rating": rating,
             "name": review['author_name'],
             "logo": review['author_logo'],
             "image": "https://i.ibb.co/0Bsq8MC/user-image.png",
             "date": review['review_datetime_utc'],
             "review_type": review_type,
-            "tokenized_review": wrap_words_with_span(review_text),
+            "tokenized_review": review['tokenized_review'],
             "aspects": aspect_details
         }
 

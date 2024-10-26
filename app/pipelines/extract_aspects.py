@@ -4,7 +4,9 @@ from app.processing_text import preprocess_arabic_text, extract_aspect_data, get
 import json
 from app.model_singleton import ModelSingleton
 from app.scrape_save_reviews import scrape_reviews
+from app.processing_text import wrap_words_with_span
 from bson.objectid import ObjectId
+import re
 
 db = get_database()
 if db is not None:
@@ -273,6 +275,7 @@ def save_aspects_data(reviews, business_id):
             print('done')
 
         if is_review_analyzed == "false":
+    
             reviews_collection.update_one(
                 {"review_id": review_id},  # Match the review by review_id
                 {"$set": {"is_analyzed": "true"}}  # Set is_analyzed to True
@@ -280,6 +283,41 @@ def save_aspects_data(reviews, business_id):
             is_review_analyzed = "true"
 
 
+def handele_reviews_asepct_tags(reviews):
+
+    for review in reviews:
+       # Get aspects for the review
+        aspects = list(aspects_collection.find({"review_id": review['review_id']}))
+        review_text = review['review_text']
+        review_aspects_text = review['review_text']
+        aspect_details = []
+        
+        for aspect in aspects:
+            aspect_str = aspect['aspect']
+            polarity_score = aspect['polarity_score']
+            polarity = aspect['polarity']
+
+            # Color-code the aspects
+            if polarity == 'positive':
+                highlighted_aspect = f"<span style='color: #3fda68;'>{aspect_str}</span>"
+            elif polarity == 'negative':
+                highlighted_aspect = f"<span style='color: #f8265b;'>{aspect_str}</span>"
+            else:
+                highlighted_aspect = aspect_str
+
+            # Replace the aspect in the review text
+            review_aspects_text = review_aspects_text.replace(aspect_str, highlighted_aspect)
+            tokenized_review = wrap_words_with_span(review_text)
+
+            reviews_collection.update_one(
+            {"review_id": review['review_id']},
+            {
+                "$set": {
+                    "review_aspects_text": review_aspects_text,
+                    "tokenized_review": tokenized_review
+                }
+            }
+            )
 
 def extract_save_aspects(business_id, url):
 
@@ -294,3 +332,5 @@ def extract_save_aspects(business_id, url):
     reviews = reviews_collection.find({"business_id": business_id})
 
     save_aspects_data(reviews, business_id)
+
+    handele_reviews_asepct_tags(reviews)
