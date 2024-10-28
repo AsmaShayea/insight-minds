@@ -88,9 +88,14 @@ def prepare_summary_prompt(business_id):
 #     return vector_store
 
 # Generate insights text from the processed aspects
-# Generate insights text from the processed aspects
+# Define regex patterns to extract sections
+summary_pattern = r"الملخص:\n\n(.*?)\n\n2- توصيات"
+recommendations_pattern = r"2- توصيات:\n\n(.*?)\n\n3- أفكار"
+ideas_pattern = r"3- أفكار:\n\n(.*)"
+
 def generate_insights_text(business_id):
-    # # Create the vector store from the retrieved data
+    # Get your response data (assuming response is already defined here)
+        # # Create the vector store from the retrieved data
     # summary_vector_store = setup_summary_vector_store()
     # retriever = summary_vector_store.as_retriever()
 
@@ -106,47 +111,47 @@ def generate_insights_text(business_id):
     # Run the query and get insights
     response = qa.run(summary_prompt)
 
-    # Define regex patterns to extract sections
-    summary_pattern = r"الملخص:\n\n(.*?)\n\n2- توصيات"
-    recommendations_pattern = r"2- توصيات:\n\n(.*?)\n\n3- أفكار"
-    ideas_pattern = r"3- أفكار:\n\n(.*)"
-
     # Extract sections
     summary_match = re.search(summary_pattern, response, re.DOTALL)
     recommendations_match = re.search(recommendations_pattern, response, re.DOTALL)
     ideas_match = re.search(ideas_pattern, response, re.DOTALL)
 
-    # Replace newlines with <br> tags if sections are found
-    extracted_data = {
-        "summary": summary_match.group(1).strip().replace('\n', '<br>') if summary_match else "",
-        "recommendations": recommendations_match.group(1).strip().replace('\n', '<br>') if recommendations_match else "",
-        "ideas": ideas_match.group(1).strip().replace('\n', '<br>') if ideas_match else ""
-    }
-
-    current_datetime = datetime.now()
-
-    insights_data = {
-        "business_id": business_id,
-        "data": extracted_data,
-        "extraction_date": current_datetime,
-    }
-
-    try:
-        insights_collection = get_database()['insights']
-    
-        # Insert the data and retrieve the generated _id
-        insights_id = insights_collection.insert_one(insights_data).inserted_id
+    # Ensure sections are not empty
+    if (summary_match and summary_match.group(1).strip()) or \
+       (recommendations_match and recommendations_match.group(1).strip()) or \
+       (ideas_match and ideas_match.group(1).strip()):
         
-        # Ensure the insights_id was created successfully
-        if insights_id is None:
-            return {"error": "Insertion failed, no ID returned."}
+        # Format extracted data with <br> tags replacing newline characters
+        extracted_data = {
+            "summary": summary_match.group(1).strip().replace('\n', '<br>') if summary_match else "",
+            "recommendations": recommendations_match.group(1).strip().replace('\n', '<br>') if recommendations_match else "",
+            "ideas": ideas_match.group(1).strip().replace('\n', '<br>') if ideas_match else ""
+        }
         
-        insights_id_str = str(insights_id)
-        print(f"Inserted document ID: {insights_id_str}")
+        current_datetime = datetime.now()
 
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        return {"error": str(e)}
+        insights_data = {
+            "business_id": business_id,
+            "data": extracted_data,
+            "extraction_date": current_datetime,
+        }
+
+        try:
+            insights_collection = get_database()['insights']
+            
+            # Insert the data and retrieve the generated _id
+            insights_id = insights_collection.insert_one(insights_data).inserted_id
+            
+            # Ensure the insights_id was created successfully
+            if insights_id is None:
+                print("Insertion failed, no ID returned.")
+            else:
+                print(f"Inserted document ID: {str(insights_id)}")
+
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+    else:
+        print("No valid data found to insert.")
     
     # # Create JSON object with catchy headings
     # extracted_data = {
@@ -164,9 +169,9 @@ def generate_insights_text(business_id):
     #     """
     # }
     # Return the response as JSON-compatible dictionary
-    return {
-    "insights_id": insights_id_str,
-    "business_id": business_id,
-    "data": extracted_data,
-    "extraction_date": current_datetime
-    }
+    # return {
+    # "insights_id": insights_id_str,
+    # "business_id": business_id,
+    # "data": extracted_data,
+    # "extraction_date": current_datetime
+    # }

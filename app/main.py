@@ -449,20 +449,13 @@ async def generate_insights(business_id: str):
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+
     #Format the response with headings
+    # Format the response with headings
     extracted_data = {
-        "summary": f"""
-            <h3><strong>ملخص تجربة العملاء</strong></h3>
-            {insights['data']['summary']}
-        """,
-        "recommendations": f"""
-            <h3><strong>توصيات</strong></h3>
-            {insights['data']['recommendations']}
-        """,
-        "ideas": f"""
-            <h3><strong>أفكار مبتكرة</strong></h3>
-            {insights['data']['ideas']}
-        """
+        "summary": "<h3><strong>ملخص تجربة العملاء</strong></h3>" + insights['data']['summary'].strip().replace('\n', '<br>'),
+        "recommendations": "<h3><strong>توصيات</strong></h3>" + insights['data']['recommendations'].strip().replace('\n', '<br>'),
+        "ideas": "<h3><strong>أفكار مبتكرة</strong></h3>" + insights['data']['ideas'].strip().replace('\n', '<br>')
     }
 
     # Return the response with insights_id and business_id
