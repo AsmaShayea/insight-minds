@@ -28,6 +28,7 @@ def is_arabic(text):
     else:
         return False
 
+
 def create_new_business():
 
     business_data = {
@@ -39,24 +40,33 @@ def create_new_business():
     
     return business_id
 
-def scrape_reviews(business_id, url):
-    google_id = process_url(url)
+
+
+def scrape_reviews(google_id, url):
+
+    if not google_id:
+        google_id = process_url(url)
     # Scraping Google reviews using the business name and location
     results = api_client.google_maps_reviews(google_id, 
-        reviews_limit=5000, 
+        reviews_limit=10, 
         ignore_empty=True,
         language='ar'
     )
-
 
     # Save business and reviews data into DB
     for place in results:
         # Check if the place already exists in the database by place_id
         existing_business = business_collection.find_one({"google_id": place['google_id']})
         reviews = place['reviews_data']
-        
-        if not existing_business:
 
+        if existing_business:
+            business_id = str(existing_business["_id"])  # Converts ObjectId to string
+            print("Business ID found:", business_id)
+        
+        else:
+
+            business_id = create_new_business()
+            existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
             # If the place doesn't exist, insert it into the database
             business_data = {
                 "name": place['name'],
@@ -82,40 +92,37 @@ def scrape_reviews(business_id, url):
             )
             print(f"Added business with business_id {business_id} to the database.")
 
-            
-            for review in reviews:
-
-                if is_arabic(review['review_text']):
-                    # Check if the place already exists in the database by place_id
-                    existing_review = reviews_collection.find_one({"review_id": review['review_id']})
-            
-                    if not existing_review:
-                        review_data = {
-                            "review_id": review['review_id'],
-                            "business_id": str(business_id),
-                            "review_text": review['review_text'],
-                            "owner_answer": review['owner_answer'],
-                            "review_rating": review['review_rating'],
-                            "review_timestamp": review['review_timestamp'],
-                            "review_datetime_utc": review['review_datetime_utc'],
-                            "review_likes": review['review_likes'],
-                            "is_analyzed": "false",
-                        }
-                        
-                        review_id = reviews_collection.insert_one(review_data).inserted_id
-                        print(f"Added review with review_id {review['review_id']} to the database.")
-                    else:
-                        print(f"Review with review_id {review['review_id']} already exists in the database.")
-
-            business_collection.update_one(
-                {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
-                {"$set": {"progress_status": "reviews_scrapped_successfully"}}  # Set the new progress status
-            )
         
-        else:
-            print(f"Business with google_id {place['google_id']} already exists in the database.")
-            business_id = existing_business['_id']
-            print(business_id)
+        for review in reviews:
+
+            if is_arabic(review['review_text']):
+                # Check if the place already exists in the database by place_id
+                existing_review = reviews_collection.find_one({"review_id": review['review_id']})
+        
+                if not existing_review:
+                    review_data = {
+                        "review_id": review['review_id'],
+                        "business_id": str(business_id),
+                        "review_text": review['review_text'],
+                        "owner_answer": review['owner_answer'],
+                        "review_rating": review['review_rating'],
+                        "review_timestamp": review['review_timestamp'],
+                        "review_datetime_utc": review['review_datetime_utc'],
+                        "review_likes": review['review_likes'],
+                        "is_analyzed": "false",
+                    }
+                    
+                    review_id = reviews_collection.insert_one(review_data).inserted_id
+                    print(f"Added review with review_id {review['review_id']} to the database.")
+                else:
+                    print(f"Review with review_id {review['review_id']} already exists in the database.")
+
+        business_collection.update_one(
+            {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
+            {"$set": {"progress_status": "reviews_scrapped_successfully"}}  # Set the new progress status
+        )
+    
+        print(f"Reviews and business Added")
 
     return business_id
 

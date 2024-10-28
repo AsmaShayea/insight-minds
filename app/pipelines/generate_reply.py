@@ -5,6 +5,7 @@ from langchain.chains import RetrievalQA
 from app.vector_store_cache import VectorStoreCache
 from app.database import get_database
 from app.model_singleton import ModelSingleton
+import re
 
 # Fetch the MongoDB collection
 reviews_collection = get_database()['reviews']
@@ -73,31 +74,75 @@ def generate_reply(review_id):
     return response
 
 
+# def correct_reply(reply_text):
+#     reply_text = reply_text.strip()  # Clean up any extraneous whitespace or newlines
+#     print("Corrected reply_text:", reply_text)
+
+#     # Prepare the prompt for response generation
+# prompt_template = f"""
+#     Correct the following text by check any grammer or spelling errors:
+#     - The reply must be at the same language as the input_reply.
+#     - Just correct without any further text.
+#     - Follow the example format provided below and response with just the output result.
+
+#     Example:
+#     input: نحن نقدر تييمك ونوسف اذا لم تكن رضياً بشكل كاملسنعمل جاهدين علي تحسين خدماتنا.
+#     output: نحن نقدر تقييمك ونأسف إذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا.
+
+    
+#     Now, give the output of correcting the following input:
+#     input: {reply_text}
+#     output:
+#     """
+    
+
+#     Example:
+#     input: نحن نقدر تييمك ونوسف اذا لم تكن رضياً بشكل كاملسنعمل جاهدين علي تحسين خدماتنا.
+#     output: نحن نقدر تقييمك ونأسف إذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا.
+
+    
+#     Now, give the output of correcting the following input:
+#     input: {reply_text}
+#     output:
+#     """
+    
+
+
+#     model = ModelSingleton.get_model()
+#     print("Prompt template:", prompt_template)  # This will print the clean prompt template
+#     response = model.generate(prompt_template)['results'][0]['generated_text']
+
+#     return response
+
+
 def correct_reply(reply_text):
-    print("reply_text", reply_text)
+    reply_text = reply_text.strip()  # Clean up extra spaces and line breaks
 
-   # Prepare the prompt for response generation
+    # Prepare the prompt for response generation
     prompt_template = f"""
-
-    Correct the following text by check any grammer or spelling errors:
-    - Ensure that the reply is in the same language as the input_reply.
+    Correct the following text by checking for any grammar or spelling errors:
+     - The reply must be at the same language as the input_reply.
     - Just correct without any further text.
-    - Follow the example format provided below and response with just the output.
+    - Follow the example format provided below and response with just the output result.
+    - Only return the corrected text without any labels, prefixes, or additional formatting.
 
     Example:
     input: نحن نقدر تييمك ونوسف اذا لم تكن رضياً بشكل كاملسنعمل جاهدين علي تحسين خدماتنا.
     output: نحن نقدر تقييمك ونأسف إذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا.
-    Example_END
 
-    Now, give the output of correcting the following input:
-    input: {reply_text}
-    output:
+    Now, correct the following input and return just the corrected text:
+    {reply_text}
     """
 
-   
     model = ModelSingleton.get_model()
-    print(prompt_template)
-    # Generate the response
     response = model.generate(prompt_template)['results'][0]['generated_text']
 
-    return response
+     # Define a regular expression pattern to match "Output:", "output:", "Answer:", "answer:"
+    pattern = r"\b(?:[Oo]utput|[Aa]nswer):\s*"
+    
+    # Substitute the pattern with an empty string
+    cleaned_text = re.sub(pattern, "", response).strip()
+
+    # Strip any extra whitespace or newlines from the response
+    return cleaned_text
+

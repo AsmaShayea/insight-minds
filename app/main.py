@@ -3,6 +3,7 @@ from time import sleep
 from fastapi.middleware.cors import CORSMiddleware  # Import CORSMiddleware
 from fastapi.responses import JSONResponse
 from bson.objectid import ObjectId
+from pydantic import BaseModel
 from .database import get_database
 from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments, get_top_aspects_and_opinions, get_aspect_counts_by_month
 from .pipelines.insights_extractions import generate_insights_text
@@ -10,7 +11,6 @@ from .pipelines.generate_reply import generate_reply, get_instance, correct_repl
 from .processing_text import wrap_words_with_span
 from .pipelines.extract_aspects import extract_save_aspects, handele_reviews_asepct_tags
 from bson import ObjectId
-from .scrape_save_reviews import create_new_business
 import math
 from typing import Optional
 
@@ -50,40 +50,40 @@ else:
 
 
 
-#### First API (Add new business data) Started
+#### 1- First API (Add new business data) Started
 task_status = {}
 
 # do process at background
-def background_task(business_id: str, url: Optional[str] = None):
+def background_task(google_id: Optional[str] = None, url: Optional[str] = None):
 
-    task_status[business_id] = "running"
+    task_status[google_id] = "running"
     try:
-
-        extract_save_aspects(business_id, url)  # Simulate a long-running task
+        extract_save_aspects(google_id, url)  # Simulate a long-running task
 
         # Simulate a background task (e.g., scraping)
-        print(f"Scraping {url} for business {business_id}")
-        task_status[business_id] = "completed"
+        print(f"Scraping {url} for business {google_id}")
+        task_status[google_id] = "completed"
 
     except Exception as e:
         # Mark task as failed if an error occurs
-        task_status[business_id] = "failed"
-        print(f"Error in task {business_id}: {e}")
+        task_status[google_id] = "failed"
+        print(f"Error in task {google_id}: {e}")
 
 
 # Start the background task
-def start_task(background_tasks: BackgroundTasks, business_id: Optional[str] = None, url: Optional[str] = None):
-    # If business_id is not provided, create a new one
-    if not business_id:
-        business_id = create_new_business()
+def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = None, url: Optional[str] = None):
     
-    background_tasks.add_task(background_task, business_id, url)
-    return {"message": f"Business {business_id} started scraping {url}"}
+    background_tasks.add_task(background_task, google_id, url)
+    return {"message": f"Business {google_id} started scraping {url}"}
 
-# Endpoint to start the background task
+# Define the Pydantic model for the request body
+class BusinessRequest(BaseModel):
+    google_id: Optional[str] = None
+    url: Optional[str] = None
+
 @app.post("/scrape-extract-aspects")
-async def add_new_business(background_tasks: BackgroundTasks, business_id: Optional[str] = None, url: Optional[str] = None):
-    response = start_task(background_tasks, business_id, url)
+async def add_new_business(background_tasks: BackgroundTasks, request: BusinessRequest):
+    response = start_task(background_tasks, request.google_id, request.url)
     return response
 
 #### First API (Add new business data) End
@@ -104,46 +104,6 @@ async def add_new_business(background_tasks: BackgroundTasks, business_id: Optio
 
 
 
-# chaeck business loading data status
-def business_loading_status(business_id: str):
-
-    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
-
-
-    if not business_data.get('progress_status'):
-        raise HTTPException(status_code=404, detail="Business not found")
-
-    if(business_data['progress_status'] == "completed"):
-        progress_status = "active"
-        progress_message =  "Request successful"
-        progress_percentage = 100
-        
-    else:
-        status = task_status.get(business_id, "not found")
-
-        if(status == "failed"):
-
-            progress_status = "error"
-            progress_message =  "Task stopped for unrecognized error"
-            progress_percentage = 0
-
-        else:
-            # Check if the task is completed
-            total_reviews = reviews_collection.count_documents({"business_id": business_id})
-            analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
-        
-
-            # Extracting the results
-            if total_reviews > 0:
-                progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
-            else:
-                progress_percentage = 0
-
-            progress_status = "in_progress"
-            progress_message =  "data in progress and please chaek later"
-            progress_percentage = progress_percentage
-
-    return progress_status, progress_message, progress_percentage
 
 
 
@@ -155,7 +115,7 @@ def business_loading_status(business_id: str):
 #     if not business_data.get('progress_status'):
 #         raise HTTPException(status_code=404, detail="Business not found")
     
-#     if(business_data['progress_status'] == "Completed"):
+#     if(business_data['progress_status'] == "completed"):
 
 #         return {
 #             "progress_status": "active",
@@ -199,6 +159,11 @@ def business_loading_status(business_id: str):
 #             }
 
 
+
+
+
+#### 2- Second API (Get all business list) Started
+
 # Helper function to serialize ObjectId to string and show only specific fields
 def serialize_business_data(business):
     return {
@@ -210,8 +175,6 @@ def serialize_business_data(business):
         "is_my_business": business.get("is_my_business")  # Include is_my_business
     }
 
-
-#### Second API (Get all business list) Started
 @app.get("/get-business-data")
 async def get_businesses_data():
     try:
@@ -238,6 +201,8 @@ async def get_businesses_data():
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
 #### Second API (Get all business list) End
 
 # def serialize_doc(doc):
@@ -262,43 +227,88 @@ def read_root():
 
 
 
-#### Third API (Get a business data and insights) Started
+#### 3- Third API (Get a business data and insights) Started
+# chaeck business loading data status
+def business_loading_status(business_id: str):
+
+    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
+
+
+    if not business_data.get('progress_status'):
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    if(business_data['progress_status'] == "completed"):
+        progress_status = "active"
+        progress_message =  "Request successful"
+        progress_percentage = 100
+        
+    else:
+        status = task_status.get(business_id, "not found")
+
+        if(status == "failed"):
+
+            progress_status = "error"
+            progress_message =  "Task stopped for unrecognized error"
+            progress_percentage = 0
+
+        else:
+            # Check if the task is completed
+            total_reviews = reviews_collection.count_documents({"business_id": business_id})
+            analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
+        
+
+            # Extracting the results
+            if total_reviews > 0:
+                progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
+            else:
+                progress_percentage = 0
+
+            progress_status = "in_progress"
+            progress_message =  "data in progress and please chaek later"
+            progress_percentage = progress_percentage
+
+    return progress_status, progress_message, progress_percentage
+
+
 @app.get('/insights/{business_id}')
 def getInsights(business_id: str):
     
     progress_status, progress_message, progress_percentage = business_loading_status(business_id)
+    data = None
 
-
-    result = JSONResponse(content={
-        "status": 200,
-        "progress_status": progress_status,
-        "message": progress_message,
-        "progress_percentage" : progress_percentage,
-        "data": {
-            "overal_sentiment": getOveralSentiment(),
-            "most_popular_aspects": group_aspects_and_calculate_sentiments(),
-            "topicOpinions": get_top_aspects_and_opinions(),
-            "get_aspect_counts_by_month": get_aspect_counts_by_month(),
-            "overall_review_tone": {
+    if(progress_status == "active"):
+        data = {
+            "overal_sentiment": getOveralSentiment(business_id),
+            "most_popular_aspects": group_aspects_and_calculate_sentiments(business_id),
+            "topicOpinions": get_top_aspects_and_opinions(business_id),
+            "get_aspect_counts_by_month": get_aspect_counts_by_month(business_id),
+            "overall_review_tone": { ##Future Work
                 "Happy": 20,
                 "Angry": 10,
                 "Satisfied": 30,
                 "Disappointed": 10,
                 "Excited": 30
             },
-            "get_category_sentiment": [
+            "get_category_sentiment": [ ##Future Work
                 {"category": "Product", "positive": 50, "negative": 50},
                 {"category": "Service", "positive": 80, "negative": 20},
                 {"category": "Place", "positive": 90, "negative": 10},
                 {"category": "Price", "positive": 30, "negative": 70}
             ]
         }
+
+    result = JSONResponse(content={
+        "status": 200,
+        "progress_status": progress_status,
+        "message": progress_message,
+        "progress_percentage" : progress_percentage,
+        "data": data
     })
     return result
 #### Third API (Get a business data and insights) End
 
 
-#### Fourth API (Get all business reviews) Started
+#### 4- Fourth API (Get all business reviews) Started
 @app.get('/reviews/{business_id}')
 def get_reviews(business_id: str):
     # Get business details
@@ -387,7 +397,7 @@ def get_reviews(business_id: str):
 #### Fourth API (Get all business reviews) End
 
 
-#### Fifth API (Generate a reply for a review) Started
+#### 5- Fifth API (Generate a reply for a review) Started
 @app.get("/get-reply/{review_id}")
 async def get_reply(review_id: str):
     try:
@@ -401,12 +411,16 @@ async def get_reply(review_id: str):
 #### Fifth API (Generate a reply for a review) End
 
 
-#### Sixth API (Correct current review) Started
+#### 6- Sixth API (Correct current review) Started
+# Define a Pydantic model for the input
+class ReplyRequest(BaseModel):
+    reply_text: str
+    
 @app.post("/correct-reply")
-async def correct_reply_endpoint(reply_text: str = Body(...)):
+async def correct_reply_endpoint(request: ReplyRequest):
     """Endpoint to correct a business owner's reply."""
-    corrected_reply = correct_reply(reply_text)
-    return {"corrected_reply": corrected_reply}    
+    corrected_reply = correct_reply(request.reply_text)  # Access reply_text from the Pydantic model
+    return {"corrected_reply": corrected_reply}
 #### Sixth API (Correct current review) End
 
 
@@ -460,6 +474,10 @@ async def generate_insights(business_id: str):
     }
 #### Seventh API (Get Text Summary insights) End
 
+
+
+
+
 # #get insights
 # @app.get("/get-last-insight")
 # async def get_latest_insights():
@@ -477,31 +495,31 @@ async def generate_insights(business_id: str):
     
 #     return JSONResponse(content={"message": "No insights found."}, status_code=404)
 
-#Get business setting data
-@app.get("/get-business-details/{business_id}")
-async def get_business_details(business_id):
-    # Get the last document based on the extraction_date
-    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
+# #Get business setting data
+# @app.get("/get-business-details/{business_id}")
+# async def get_business_details(business_id):
+#     # Get the last document based on the extraction_date
+#     business_data = business_collection.find_one({"_id": ObjectId(business_id)})
     
-    # Convert the cursor to a list and check if there's a document
+#     # Convert the cursor to a list and check if there's a document
     
-    return {
-        "id" : str(business_data['_id']),
-        "name": business_data['name'],
-        "full_address": business_data['full_address'],
-        "city": business_data['city'],
-        "description": business_data['description'],
-        "logo": business_data['logo'],
-        "category": business_data['category'],
-        "type": business_data['type'],
-        "subtypes": business_data['subtypes']
+#     return {
+#         "id" : str(business_data['_id']),
+#         "name": business_data['name'],
+#         "full_address": business_data['full_address'],
+#         "city": business_data['city'],
+#         "description": business_data['description'],
+#         "logo": business_data['logo'],
+#         "category": business_data['category'],
+#         "type": business_data['type'],
+#         "subtypes": business_data['subtypes']
 
-    }
+#     }
     
-@app.get('/test')
-def test():
+# @app.get('/test')
+# def test():
 
-    return{"status":"Done"}
+#     return{"status":"Done"}
 
 
 

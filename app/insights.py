@@ -44,7 +44,7 @@ def calculate_sentiment_percentage(positive_count, negative_count, total_count):
 
 
 #1- Calculate overall sentiment polarity
-def getOveralSentiment():
+def getOveralSentiment(business_id):
     # Initialize counters
     positive_count = 0
     negative_count = 0
@@ -52,8 +52,9 @@ def getOveralSentiment():
 
     aspects_data = aspects_collection.find({
     "polarity": { 
-        "$nin": ["mixed", "neutral"] 
-    }
+        "$nin": ["mixed", "neutral"]
+    },
+    "business_id": business_id  # Add this filter to match the specific business_id
     })
 
     # Iterate over each document in the aspects collection
@@ -82,12 +83,13 @@ def getOveralSentiment():
 
 
 
-def group_aspects_and_calculate_sentiments():
+def group_aspects_and_calculate_sentiments(business_id):
     # Step 1: Group by root_aspect and count occurrences
     aspects_data = aspects_collection.find({
     "polarity": { 
-        "$nin": ["mixed", "neutral"] 
-    }
+        "$nin": ["mixed", "neutral"]
+    },
+    "business_id": business_id  # Add this filter to match the specific business_id
     })
 
     aspect_count = defaultdict(int)
@@ -133,9 +135,14 @@ def group_aspects_and_calculate_sentiments():
 
 
 
-def get_top_aspects_and_opinions():
+def get_top_aspects_and_opinions(business_id):
     # Step 1: Group aspects by polarity, and collect counts and opinions
-    aspects_data = aspects_collection.find({"polarity": {"$nin": ["mixed", "neutral"]}})
+    aspects_data = aspects_collection.find({
+        "polarity": { 
+            "$nin": ["mixed", "neutral"]
+        },
+        "business_id": business_id  # Add this filter to match the specific business_id
+        })
 
     positive_aspects = defaultdict(int)
     negative_aspects = defaultdict(int)
@@ -192,11 +199,18 @@ def get_top_aspects_and_opinions():
     }
 
 
-def get_aspect_counts_by_month():
+def get_aspect_counts_by_month(business_id):
 
     # Fetch all reviews and aspects
-    reviews_data = list(reviews_collection.find({}))
-    aspects_data = list(aspects_collection.find({"polarity": {"$nin": ["mixed", "neutral"]}}))
+    reviews_data = list(reviews_collection.find({
+        "business_id": business_id  # Filter by business_id
+    }))
+
+    aspects_data = list(aspects_collection.find({
+        "polarity": {"$nin": ["mixed", "neutral"]},  # Filter by polarity
+        "business_id": business_id                    # Filter by business_id
+    }))
+
 
     # Convert the data to Pandas DataFrames
     reviews_df = pd.DataFrame(reviews_data)

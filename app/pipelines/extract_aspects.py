@@ -7,6 +7,7 @@ from app.scrape_save_reviews import scrape_reviews
 from app.processing_text import wrap_words_with_span
 from bson.objectid import ObjectId
 import re
+from typing import Optional
 
 db = get_database()
 if db is not None:
@@ -200,16 +201,15 @@ def clean_result(input_value):
 def save_aspects_data(reviews, business_id):
     count = 0
     categpries_list = "(Price, Product, Service, Staff, Place)"
-
+    print("123")
     for review in reviews:
         count = count + 1
         print(count)
-
         review_txt = review['review_text']
         review_id = review['review_id']
         existing_aspect_review = aspects_collection.find_one({"review_id": review_id})
         is_review_analyzed = "false"
-        
+        print("1234")
         if not existing_aspect_review:
             print(review_id)
             print(review_txt)
@@ -269,7 +269,7 @@ def save_aspects_data(reviews, business_id):
 
             business_collection.update_one(
                 {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
-                {"$set": {"progress_status": "Completed"}}  # Set the new progress status
+                {"$set": {"progress_status": "completed"}}  # Set the new progress status
             )
         else:
             print('done')
@@ -281,6 +281,8 @@ def save_aspects_data(reviews, business_id):
                 {"$set": {"is_analyzed": "true"}}  # Set is_analyzed to True
             )
             is_review_analyzed = "true"
+
+    print("done")
 
 
 def handele_reviews_asepct_tags(reviews):
@@ -294,7 +296,7 @@ def handele_reviews_asepct_tags(reviews):
         
         for aspect in aspects:
             aspect_str = aspect['aspect']
-            polarity_score = aspect['polarity_score']
+            # polarity_score = aspect['polarity_score']
             polarity = aspect['polarity']
 
             # Color-code the aspects
@@ -319,18 +321,46 @@ def handele_reviews_asepct_tags(reviews):
             }
             )
 
-def extract_save_aspects(business_id, url):
 
-    business_reviews = reviews_collection.count_documents({"business_id": business_id})
+def extract_save_aspects(google_id: Optional[str] = None, url: Optional[str] = None):
 
-    if(business_reviews == 0):
-        business_id = scrape_reviews(business_id, url)
-
-    # business_id = "66eb726e1b898c92f06c243f"  # Replace with the actual business ID
-    # Find all reviews for the specific business_id
+    # If `google_id` or `url` is provided, attempt to retrieve or create a new business ID
+    if google_id:
+        document = business_collection.find_one({"google_id": google_id})
+        if document:
+            business_id = str(document["_id"])  # Convert ObjectId to string
+            print("Business ID:", business_id)
+        else:
+            business_id = scrape_reviews(google_id, url)
+    elif url:
+        business_id = scrape_reviews(None, url)
+    else:
+        return {"status": "error", "message": "Please provide either 'url' or 'google_id'"}
+    
     print("hi2 bbbbbbbbb")
     reviews = reviews_collection.find({"business_id": business_id})
 
+    print("hi3 ccccc")
     save_aspects_data(reviews, business_id)
 
+    print("hi4 dddddd")
+    ## color aspects inside review text in red or green based on its
     handele_reviews_asepct_tags(reviews)
+
+
+# def extract_save_aspects(business_id, url):
+
+#     business_reviews = reviews_collection.count_documents({"business_id": business_id})
+
+#     if(business_reviews == 0):
+#         business_id = scrape_reviews(business_id, url)
+
+#     # business_id = "66eb726e1b898c92f06c243f"  # Replace with the actual business ID
+#     # Find all reviews for the specific business_id
+#     print("hi2 bbbbbbbbb")
+#     reviews = reviews_collection.find({"business_id": business_id})
+
+#     save_aspects_data(reviews, business_id)
+
+#     ## color aspects inside review text in red or green based on its
+#     handele_reviews_asepct_tags(reviews)
