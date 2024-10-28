@@ -6,50 +6,51 @@ from langchain.vectorstores import Chroma
 from app.database import get_database
 import re
 from datetime import datetime
+from app.vector_store_cache import VectorStoreCache
 
-# Get the most common positive and negative aspects separately, along with their sentiment and associated reviews
-def get_common_aspects_and_reviews():
-    aspects_collection = get_database()['aspects']
-    # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, root_aspect, and polarity
-    pipeline = [
-        {"$group": {
-            "_id": {"aspect": "$aspect", "root_aspect": "$root_aspect", "polarity": "$polarity"},  # Group by aspect, root_aspect, and polarity
-            "count": {"$sum": 1},  # Count occurrences
-            "all_opinions": {"$push": "$opinions"}  # Collect associated opinions into an array
-        }},
-        {"$match": {"count": {"$gt": 3}}},  # Keep only aspects mentioned more than 3 times
-        {"$sort": {"count": -1}}  # Sort by count in descending order
-    ]
+# # Get the most common positive and negative aspects separately, along with their sentiment and associated reviews
+# def get_common_aspects_and_reviews():
+#     aspects_collection = get_database()['aspects']
+#     # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, root_aspect, and polarity
+#     pipeline = [
+#         {"$group": {
+#             "_id": {"aspect": "$aspect", "root_aspect": "$root_aspect", "polarity": "$polarity"},  # Group by aspect, root_aspect, and polarity
+#             "count": {"$sum": 1},  # Count occurrences
+#             "all_opinions": {"$push": "$opinions"}  # Collect associated opinions into an array
+#         }},
+#         {"$match": {"count": {"$gt": 3}}},  # Keep only aspects mentioned more than 3 times
+#         {"$sort": {"count": -1}}  # Sort by count in descending order
+#     ]
     
-    common_aspects = list(aspects_collection.aggregate(pipeline))
+#     common_aspects = list(aspects_collection.aggregate(pipeline))
     
-    return common_aspects
+#     return common_aspects
 
-# Step 3: Retrieve the reviews for these aspects
-def process_aspects():
-    common_aspects = get_common_aspects_and_reviews()
-    positive_aspects = [entry for entry in common_aspects if entry['_id']['polarity'] == 'positive'][:3]  # Top 3 positive aspects
-    negative_aspects = [entry for entry in common_aspects if entry['_id']['polarity'] == 'negative'][:3]  # Top 3 negative aspects
+# # Step 3: Retrieve the reviews for these aspects
+# def process_aspects():
+#     common_aspects = get_common_aspects_and_reviews()
+#     positive_aspects = [entry for entry in common_aspects if entry['_id']['polarity'] == 'positive'][:3]  # Top 3 positive aspects
+#     negative_aspects = [entry for entry in common_aspects if entry['_id']['polarity'] == 'negative'][:3]  # Top 3 negative aspects
 
-    retrieved_data = []
-    for aspect_entry in positive_aspects + negative_aspects:
-        aspect = aspect_entry['_id']['aspect']
-        root_aspect = aspect_entry['_id']['root_aspect']  # Retrieve root_aspect
-        sentiment = aspect_entry['_id']['polarity']
-        all_opinions = aspect_entry['all_opinions']  # Get all collected opinions arrays
+#     retrieved_data = []
+#     for aspect_entry in positive_aspects + negative_aspects:
+#         aspect = aspect_entry['_id']['aspect']
+#         root_aspect = aspect_entry['_id']['root_aspect']  # Retrieve root_aspect
+#         sentiment = aspect_entry['_id']['polarity']
+#         all_opinions = aspect_entry['all_opinions']  # Get all collected opinions arrays
         
-        # Flatten the list of lists for opinions (since opinions are stored as arrays within arrays)
-        flattened_opinions = [opinion for sublist in all_opinions for opinion in sublist]
+#         # Flatten the list of lists for opinions (since opinions are stored as arrays within arrays)
+#         flattened_opinions = [opinion for sublist in all_opinions for opinion in sublist]
         
-        # Add to the final retrieved data structure
-        retrieved_data.append({
-            'aspect': aspect,
-            'root_aspect': root_aspect,
-            'sentiment': sentiment,
-            'count': aspect_entry['count'],  # Add the count of the aspect
-            'all_opinions': flattened_opinions,  # Store all consolidated opinions in the final structure
-        })
-    return retrieved_data
+#         # Add to the final retrieved data structure
+#         retrieved_data.append({
+#             'aspect': aspect,
+#             'root_aspect': root_aspect,
+#             'sentiment': sentiment,
+#             'count': aspect_entry['count'],  # Add the count of the aspect
+#             'all_opinions': flattened_opinions,  # Store all consolidated opinions in the final structure
+#         })
+#     return retrieved_data
 
 # Prepare summary prompt based on retrieved data
 def prepare_summary_prompt(business_id):
@@ -74,27 +75,30 @@ def prepare_summary_prompt(business_id):
   
     return prompt_template
 
-# Setup the embeddings and vector store for the summary task
-def setup_summary_vector_store():
-    retrieved_data = process_aspects()
+# # Setup the embeddings and vector store for the summary task
+# def setup_summary_vector_store():
+#     retrieved_data = process_aspects()
 
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
-    documents = [
-        f"Aspect: {data['aspect']}\nSentiment: {data['sentiment']}\nOpinions: {', '.join(data['all_opinions'])}" 
-        for data in retrieved_data
-    ]
-    vector_store = Chroma.from_texts(documents, embeddings)
-    return vector_store
+#     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
+#     documents = [
+#         f"Aspect: {data['aspect']}\nSentiment: {data['sentiment']}\nOpinions: {', '.join(data['all_opinions'])}" 
+#         for data in retrieved_data
+#     ]
+#     vector_store = Chroma.from_texts(documents, embeddings)
+#     return vector_store
 
 # Generate insights text from the processed aspects
 # Generate insights text from the processed aspects
 def generate_insights_text(business_id):
-    # Create the vector store from the retrieved data
-    summary_vector_store = setup_summary_vector_store()
-    retriever = summary_vector_store.as_retriever()
+    # # Create the vector store from the retrieved data
+    # summary_vector_store = setup_summary_vector_store()
+    # retriever = summary_vector_store.as_retriever()
 
     # Prepare summary prompt using retrieved data
     summary_prompt = prepare_summary_prompt(business_id)
+
+    # Use the cached retriever
+    retriever = VectorStoreCache.get_retriever("text_summary")
 
     # Initialize the RetrievalQA chain
     qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
@@ -129,38 +133,40 @@ def generate_insights_text(business_id):
 
     try:
         insights_collection = get_database()['insights']
-        
-        # Insert the data
+    
+        # Insert the data and retrieve the generated _id
         insights_id = insights_collection.insert_one(insights_data).inserted_id
         
-        # Convert ObjectId to string before using it in responses or logs
-        insights_id_str = str(insights_id)
+        # Ensure the insights_id was created successfully
+        if insights_id is None:
+            return {"error": "Insertion failed, no ID returned."}
         
+        insights_id_str = str(insights_id)
         print(f"Inserted document ID: {insights_id_str}")
 
     except Exception as e:
         print(f"Error occurred: {e}")
         return {"error": str(e)}
     
-    # Create JSON object with catchy headings
-    extracted_data = {
-        "summary": f"""
-            <h3><strong>تجربة العملاء: تقييم شامل لنمط نمق كافيه</strong></h3>
-            {extracted_data['summary'].replace('\n', '<br>')}
-        """,
-        "recommendations": f"""
-            <h3><strong>تحسينات مقترحة: خطوات لتعزيز تجربة العملاء في نمق كافيه</strong></h3>
-            {extracted_data['recommendations'].replace('\n', '<br>')}
-        """,
-        "ideas": f"""
-            <h3><strong>أفكار مبتكرة: كيف يمكن أن نجذب المزيد من الزبائن إلى نمق كافيه؟</strong></h3>
-            {extracted_data['ideas'].replace('\n', '<br>')}
-        """
-    }
+    # # Create JSON object with catchy headings
+    # extracted_data = {
+    #     "summary": f"""
+    #         <h3><strong>تجربة العملاء: تقييم شامل لنمط نمق كافيه</strong></h3>
+    #         {extracted_data['summary'].replace('\n', '<br>')}
+    #     """,
+    #     "recommendations": f"""
+    #         <h3><strong>تحسينات مقترحة: خطوات لتعزيز تجربة العملاء في نمق كافيه</strong></h3>
+    #         {extracted_data['recommendations'].replace('\n', '<br>')}
+    #     """,
+    #     "ideas": f"""
+    #         <h3><strong>أفكار مبتكرة: كيف يمكن أن نجذب المزيد من الزبائن إلى نمق كافيه؟</strong></h3>
+    #         {extracted_data['ideas'].replace('\n', '<br>')}
+    #     """
+    # }
     # Return the response as JSON-compatible dictionary
     return {
-        "insights_id": insights_id_str,
-        "business_id": business_id,
-        "data": extracted_data,
-        "extraction_date": current_datetime
+    "insights_id": insights_id_str,
+    "business_id": business_id,
+    "data": extracted_data,
+    "extraction_date": current_datetime
     }

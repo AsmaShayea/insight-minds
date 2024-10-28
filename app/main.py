@@ -49,9 +49,11 @@ else:
     errors_log_collection = None
 
 
+
+#### First API (Add new business data) Started
 task_status = {}
 
-# Define your background task function
+# do process at background
 def background_task(business_id: str, url: Optional[str] = None):
 
     task_status[business_id] = "running"
@@ -68,58 +70,62 @@ def background_task(business_id: str, url: Optional[str] = None):
         task_status[business_id] = "failed"
         print(f"Error in task {business_id}: {e}")
 
+
+# Start the background task
+def start_task(background_tasks: BackgroundTasks, business_id: Optional[str] = None, url: Optional[str] = None):
+    # If business_id is not provided, create a new one
+    if not business_id:
+        business_id = create_new_business()
+    
+    background_tasks.add_task(background_task, business_id, url)
+    return {"message": f"Business {business_id} started scraping {url}"}
+
 # Endpoint to start the background task
 @app.post("/scrape-extract-aspects")
-async def start_task(background_tasks: BackgroundTasks, url: Optional[str] = None):
-    business_id = create_new_business()  # Simulate creating a new business
-   
-    # Start the background task
-    background_tasks.add_task(background_task, business_id, url)
-    
-    # Return immediate response
-    return {"message": f"Business {business_id} started scraping {url}"}
+async def add_new_business(background_tasks: BackgroundTasks, business_id: Optional[str] = None, url: Optional[str] = None):
+    response = start_task(background_tasks, business_id, url)
+    return response
+
+#### First API (Add new business data) End
 
 # Endpoint to start the background task
-@app.post("/scrape-extract-aspects/{business_id}")
-async def complete_task(background_tasks: BackgroundTasks, business_id: str, url: Optional[str] = None):
-    # Start the background task
-    background_tasks.add_task(background_task, business_id, url)
-    
-    # Return immediate response
-    return {"message": f"Business {business_id} started scraping {url}"}
+# @app.post("/scrape-extract-aspects")
+# async def add_new(url: Optional[str] = None):
 
-# Endpoint to check task status
-@app.get("/get-business-data/{business_id}")
-async def get_business_data(business_id: str):
+#     start_task(url)
+# # Endpoint to start the background task
+# @app.post("/scrape-extract-aspects/{business_id}")
+# async def complete_task(background_tasks: BackgroundTasks, business_id: str, url: Optional[str] = None):
+#     # Start the background task
+#     background_tasks.add_task(background_task, business_id, url)
+    
+#     # Return immediate response
+#     return {"message": f"Business {business_id} started scraping {url}"}
+
+
+
+# chaeck business loading data status
+def business_loading_status(business_id: str):
 
     business_data = business_collection.find_one({"_id": ObjectId(business_id)})
 
+
     if not business_data.get('progress_status'):
         raise HTTPException(status_code=404, detail="Business not found")
-    
+
     if(business_data['progress_status'] == "completed"):
-
-        return {
-            "progress_status": "active",
-            "business_data": {
-                "id": str(business_data["_id"]),  # Convert ObjectId to string
-                "category": business_data['category'],
-                "name": business_data['name'],
-                "logo": business_data['logo'],
-                "progress_status": business_data['progress_status']
-            }
-        }
-
+        progress_status = "active"
+        progress_message =  "Request successful"
+        progress_percentage = 100
+        
     else:
-
         status = task_status.get(business_id, "not found")
 
         if(status == "failed"):
-            return {
-                "progress_status": "error",
-                "message": "Task stopped for unrecognized error",
-                "progress_percentage": 0
-            }
+
+            progress_status = "error"
+            progress_message =  "Task stopped for unrecognized error"
+            progress_percentage = 0
 
         else:
             # Check if the task is completed
@@ -133,12 +139,64 @@ async def get_business_data(business_id: str):
             else:
                 progress_percentage = 0
 
+            progress_status = "in_progress"
+            progress_message =  "data in progress and please chaek later"
+            progress_percentage = progress_percentage
 
-            return {
-                "progress_status": "in_progress",
-                "message": "",
-                "progress_percentage": progress_percentage
-            }
+    return progress_status, progress_message, progress_percentage
+
+
+
+# @app.get("/get-business-data/{business_id}")
+# async def get_business_data(business_id: str):
+
+#     business_data = business_collection.find_one({"_id": ObjectId(business_id)})
+
+#     if not business_data.get('progress_status'):
+#         raise HTTPException(status_code=404, detail="Business not found")
+    
+#     if(business_data['progress_status'] == "Completed"):
+
+#         return {
+#             "progress_status": "active",
+#             "my_business_data": {
+#                 "id": str(business_data["_id"]),  # Convert ObjectId to string
+#                 "category": business_data['category'],
+#                 "name": business_data['name'],
+#                 "logo": business_data['logo'],
+#                 "progress_status": business_data['progress_status']
+#             }
+#         }
+
+#     else:
+
+#         status = task_status.get(business_id, "not found")
+
+#         if(status == "failed"):
+#             return {
+#                 "progress_status": "error",
+#                 "message": "Task stopped for unrecognized error",
+#                 "progress_percentage": 0
+#             }
+
+#         else:
+#             # Check if the task is completed
+#             total_reviews = reviews_collection.count_documents({"business_id": business_id})
+#             analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
+        
+
+#             # Extracting the results
+#             if total_reviews > 0:
+#                 progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
+#             else:
+#                 progress_percentage = 0
+
+
+#             return {
+#                 "progress_status": "in_progress",
+#                 "message": "",
+#                 "progress_percentage": progress_percentage
+#             }
 
 
 # Helper function to serialize ObjectId to string and show only specific fields
@@ -148,25 +206,39 @@ def serialize_business_data(business):
         "category": business.get("category"),
         "name": business.get("name"),
         "logo": business.get("logo"),
-        "progress_status": business.get("progress_status")
+        "progress_status": business.get("progress_status"),
+        "is_my_business": business.get("is_my_business")  # Include is_my_business
     }
 
+
+#### Second API (Get all business list) Started
 @app.get("/get-business-data")
 async def get_businesses_data():
     try:
-        # Fetch only _id, name, and logo fields from the business collection
+        # Fetch only required fields from the business collection
         business_data = [
             serialize_business_data(business) 
-            for business in business_collection.find({}, {"_id": 1, "category":1 , "name": 1, "logo": 1, "progress_status": 1})
+            for business in business_collection.find({}, {"_id": 1, "category":1, "name": 1, "logo": 1, "progress_status": 1, "is_my_business": 1})
         ]
-        
+
         if not business_data:
             raise HTTPException(status_code=404, detail="No businesses found")
+
+         # Split data into "my_business" and "other_business" based on "is_my_business" value
+        my_business = [business for business in business_data if business.get("is_my_business") == "true"]
+        other_business = [business for business in business_data if business.get("is_my_business") != "true"]
         
-        return business_data  # FastAPI will convert it to JSON automatically
+        return {
+            "progress_status": "active",
+            "data": {
+                "my_business": my_business,
+                "other_business": other_business
+            }
+        }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+#### Second API (Get all business list) End
 
 # def serialize_doc(doc):
 #     if isinstance(doc, ObjectId):
@@ -182,134 +254,51 @@ def read_root():
     return {"Hello": "World13"}
 
 
-@app.get("/check_model_cash")
-def get_model_instance():
-    msg = get_instance()
+# @app.get("/check_model_cash")
+# def get_model_instance():
+#     msg = get_instance()
 
-    return {"Hello": msg}
+#     return {"Hello": msg}
 
 
-@app.post("/correct-reply")
-async def correct_reply_endpoint(reply_text: str = Body(...)):
-    """Endpoint to correct a business owner's reply."""
-    corrected_reply = correct_reply(reply_text)
-    return {"corrected_reply": corrected_reply}
 
-# Get reply
-@app.get("/get-reply/{review_id}")
-async def get_reply(review_id: str):
-    try:
-        reply = generate_reply(review_id)
-        if reply:
-            return {"reply": reply}
-        else:
-            raise HTTPException(status_code=404, detail="Review not found.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#### Third API (Get a business data and insights) Started
+@app.get('/insights/{business_id}')
+def getInsights(business_id: str):
     
+    progress_status, progress_message, progress_percentage = business_loading_status(business_id)
 
-@app.get("/generate-text-insights/{business_id}")
-async def generate_insights(business_id: str):
-    """
-    Endpoint to run the pipeline for generating business insights.
-    """
-    insights = insights_collection.find_one({"business_id": business_id})
 
-    if insights is None:
-        print("No insights found for the given business ID.")
-        try:
-            response = generate_insights_text(business_id)  # Call the run_pipeline function
-            return {"status": "success", "data": response}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
-
-    else:
-         # Create JSON object with catchy headings
-        extracted_data = {
-            "summary": {
-                "heading": "ملخص تجربة العملاء",
-                "content": insights['data']['summary']
+    result = JSONResponse(content={
+        "status": 200,
+        "progress_status": progress_status,
+        "message": progress_message,
+        "progress_percentage" : progress_percentage,
+        "data": {
+            "overal_sentiment": getOveralSentiment(),
+            "most_popular_aspects": group_aspects_and_calculate_sentiments(),
+            "topicOpinions": get_top_aspects_and_opinions(),
+            "get_aspect_counts_by_month": get_aspect_counts_by_month(),
+            "overall_review_tone": {
+                "Happy": 20,
+                "Angry": 10,
+                "Satisfied": 30,
+                "Disappointed": 10,
+                "Excited": 30
             },
-            "recommendations": {
-                "heading": "توصيات",
-                "content": insights['data']['recommendations']
-            },
-            "ideas": {
-                "heading": "أفكار مبتكرة",
-                "content": insights['data']['ideas']
-            }
+            "get_category_sentiment": [
+                {"category": "Product", "positive": 50, "negative": 50},
+                {"category": "Service", "positive": 80, "negative": 20},
+                {"category": "Place", "positive": 90, "negative": 10},
+                {"category": "Price", "positive": 30, "negative": 70}
+            ]
         }
-        extracted_data = {
-            "summary": f"""
-                <h3><strong>ملخص تجربة العملاء</strong></h3>
-                {insights['data']['summary'].replace('\n', '<br>')}
-            """,
-            "recommendations": f"""
-                <h3><strong>توصيات</strong></h3>
-                {insights['data']['recommendations'].replace('\n', '<br>')}
-            """,
-            "ideas": f"""
-                <h3><strong>أفكار مبتكرة</strong></h3>
-                {insights['data']['ideas'].replace('\n', '<br>')}
-            """
-        }
-        return {
-            "status": "success", 
-            "data": {
-                "insights_id": str(insights['_id']),  # Convert ObjectId to string for JSON serialization
-                "business_id": insights['business_id'],
-                "data": extracted_data,
-                "extraction_date": insights['extraction_date'],
-            }
-        }
+    })
+    return result
+#### Third API (Get a business data and insights) End
 
 
-#get insights
-@app.get("/get-last-insight")
-async def get_latest_insights():
-    # Get the last document based on the extraction_date
-    last_document = insights_collection.find().limit(1)
-    
-    # Convert the cursor to a list and check if there's a document
-    last_insight = list(last_document)
-    
-    if last_insight:
-        return {
-            "id" : str(last_insight[0]['_id']),
-            "data": last_insight[0]['data']
-        }
-    
-    return JSONResponse(content={"message": "No insights found."}, status_code=404)
-
-#get insights
-@app.get("/get-business-details/{business_id}")
-async def get_business_details(business_id):
-    # Get the last document based on the extraction_date
-    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
-    
-    # Convert the cursor to a list and check if there's a document
-    
-    return {
-        "id" : str(business_data['_id']),
-        "name": business_data['name'],
-        "full_address": business_data['full_address'],
-        "city": business_data['city'],
-        "description": business_data['description'],
-        "logo": business_data['logo'],
-        "category": business_data['category'],
-        "type": business_data['type'],
-        "subtypes": business_data['subtypes']
-
-    }
-    
-@app.get('/test')
-def test():
-
-
-    return{"status":"Done"}
-
-
-# Get All Reviews
+#### Fourth API (Get all business reviews) Started
 @app.get('/reviews/{business_id}')
 def get_reviews(business_id: str):
     # Get business details
@@ -366,15 +355,15 @@ def get_reviews(business_id: str):
 
         review_data = {
             "id": str(review['_id']),
-            "clean_review_text": review['review_text'],
-            "review_text": review['review_aspects_text'],
+            "clean_review_text": review.get('review_text', ""),          # Default to empty string if not found
+            "review_text": review.get('review_aspects_text', ""),
+            "owner_answer": review.get('owner_reply', ""),                # Handle missing 'owner_reply'
             "rating": rating,
-            "name": review['author_name'],
-            "logo": review['author_logo'],
-            "image": "https://i.ibb.co/0Bsq8MC/user-image.png",
-            "date": review['review_datetime_utc'],
+            "name": review.get('author_name', "Anonymous"),              # Default name if missing
+            "image": review.get('author_logo', "https://i.ibb.co/0Bsq8MC/user-image.png"),   
+            "date": review.get('review_datetime_utc', None),             # None if date is missing
             "review_type": review_type,
-            "tokenized_review": review['tokenized_review'],
+            "tokenized_review": review.get('tokenized_review', []),      # Default to empty list if missing
             "aspects": aspect_details
         }
 
@@ -395,38 +384,132 @@ def get_reviews(business_id: str):
         }
     })
     return result
-
-@app.get('/insights/{business_id}')
-def getInsights():
-    result = JSONResponse(content={
-        "status": 200,
-        "message": "Request successful",
-        "data": {
-            "overal_sentiment": getOveralSentiment(),
-            "most_popular_aspects": group_aspects_and_calculate_sentiments(),
-            "topicOpinions": get_top_aspects_and_opinions(),
-            "get_aspect_counts_by_month": get_aspect_counts_by_month(),
-            "overall_review_tone": {
-                "Happy": 20,
-                "Angry": 10,
-                "Satisfied": 30,
-                "Disappointed": 10,
-                "Excited": 30
-            },
-            "get_category_sentiment": [
-                {"category": "Product", "positive": 50, "negative": 50},
-                {"category": "Service", "positive": 80, "negative": 20},
-                {"category": "Place", "positive": 90, "negative": 10},
-                {"category": "Price", "positive": 30, "negative": 70}
-            ]
-        }
-    })
-    return result
+#### Fourth API (Get all business reviews) End
 
 
+#### Fifth API (Generate a reply for a review) Started
+@app.get("/get-reply/{review_id}")
+async def get_reply(review_id: str):
+    try:
+        reply = generate_reply(review_id)
+        if reply:
+            return {"reply": reply}
+        else:
+            raise HTTPException(status_code=404, detail="Review not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+#### Fifth API (Generate a reply for a review) End
 
-#Realtime Scrape & get insights
-# Sample scrape reviews endpoint
-@app.get("/scrape-reviews")
-def scrape_google_reviews():
-    return {"Hello": "World15"}
+
+#### Sixth API (Correct current review) Started
+@app.post("/correct-reply")
+async def correct_reply_endpoint(reply_text: str = Body(...)):
+    """Endpoint to correct a business owner's reply."""
+    corrected_reply = correct_reply(reply_text)
+    return {"corrected_reply": corrected_reply}    
+#### Sixth API (Correct current review) End
+
+
+#### Seventh API (Get Text Summary insights) Started
+@app.get("/generate-text-insights/{business_id}")
+async def generate_insights(business_id: str):
+    """
+    Endpoint to run the pipeline for generating business insights.
+    """
+    insights_collection = get_database()['insights']  # Ensure this references the correct collection
+
+    # Fetch the insights document if it already exists
+    insights = insights_collection.find_one({"business_id": business_id})
+
+    if insights is None:
+        print("No insights found for the given business ID.")
+        try:
+            # Generate and insert insights data if none exist
+            generate_insights_text(business_id)
+            # Re-fetch the inserted insights document to get the _id
+            insights = insights_collection.find_one({"business_id": business_id})
+
+            if insights is None:
+                return {"status": "error", "message": "Failed to insert or retrieve new insights."}
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    #Format the response with headings
+    extracted_data = {
+        "summary": f"""
+            <h3><strong>ملخص تجربة العملاء</strong></h3>
+            {insights['data']['summary']}
+        """,
+        "recommendations": f"""
+            <h3><strong>توصيات</strong></h3>
+            {insights['data']['recommendations']}
+        """,
+        "ideas": f"""
+            <h3><strong>أفكار مبتكرة</strong></h3>
+            {insights['data']['ideas']}
+        """
+    }
+
+    # Return the response with insights_id and business_id
+    return {
+        "status": "success", 
+        "insights_id": str(insights['_id']),  # Convert ObjectId to string for JSON serialization
+        "business_id": insights['business_id'],
+        "data": extracted_data
+    }
+#### Seventh API (Get Text Summary insights) End
+
+# #get insights
+# @app.get("/get-last-insight")
+# async def get_latest_insights():
+#     # Get the last document based on the extraction_date
+#     last_document = insights_collection.find().limit(1)
+    
+#     # Convert the cursor to a list and check if there's a document
+#     last_insight = list(last_document)
+    
+#     if last_insight:
+#         return {
+#             "id" : str(last_insight[0]['_id']),
+#             "data": last_insight[0]['data']
+#         }
+    
+#     return JSONResponse(content={"message": "No insights found."}, status_code=404)
+
+#Get business setting data
+@app.get("/get-business-details/{business_id}")
+async def get_business_details(business_id):
+    # Get the last document based on the extraction_date
+    business_data = business_collection.find_one({"_id": ObjectId(business_id)})
+    
+    # Convert the cursor to a list and check if there's a document
+    
+    return {
+        "id" : str(business_data['_id']),
+        "name": business_data['name'],
+        "full_address": business_data['full_address'],
+        "city": business_data['city'],
+        "description": business_data['description'],
+        "logo": business_data['logo'],
+        "category": business_data['category'],
+        "type": business_data['type'],
+        "subtypes": business_data['subtypes']
+
+    }
+    
+@app.get('/test')
+def test():
+
+    return{"status":"Done"}
+
+
+
+
+
+
+# #Realtime Scrape & get insights
+# # Sample scrape reviews endpoint
+# @app.get("/scrape-reviews")
+# def scrape_google_reviews():
+#     return {"Hello": "World15"}

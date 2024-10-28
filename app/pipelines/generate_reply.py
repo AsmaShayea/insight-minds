@@ -36,9 +36,11 @@ def generate_reply(review_id):
     if not business:
         return f"Business with id {review['business_id']} not found."
 
-    # Use the cached retriever
-    retriever = VectorStoreCache.get_retriever()
-
+    try:
+        retriever = VectorStoreCache.get_retriever("generate_reply")
+    except Exception as e:
+        print("Error while retrieving VectorStoreCache:", e)
+        return "Error retrieving the VectorStoreCache."
     # Prepare the prompt for response generation
     prompt_template = f"""
         Generate a reply from the business owner to the customer review following these steps:
@@ -47,9 +49,9 @@ def generate_reply(review_id):
         - Consider that this business is a {business['category']}.
         - The reply should follow the same style, words and pahses that the owner always uses.
         - The response must be related to the review.
-        - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to ecalrify.
+        - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to calrify.
         - Reply in the same language as the review, and do not include any text in a different language.
-        - Avoid repeating general phrases or adding filler content.
+        - Avoid repeating client phrases or adding filler content.
         - Do not add any hashtag or mention
         - Follow the output of the example below.
 
