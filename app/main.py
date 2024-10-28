@@ -74,7 +74,7 @@ def background_task(google_id: Optional[str] = None, url: Optional[str] = None):
 def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = None, url: Optional[str] = None):
     
     background_tasks.add_task(background_task, google_id, url)
-    return {"message": f"Business {google_id} started scraping {url}"}
+    return {"status": "success","message": f"Business {google_id} started scraping {url}"}
 
 # Define the Pydantic model for the request body
 class BusinessRequest(BaseModel):
