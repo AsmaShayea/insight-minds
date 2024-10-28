@@ -357,7 +357,7 @@ def get_reviews(business_id: str):
             "id": str(review['_id']),
             "clean_review_text": review.get('review_text', ""),          # Default to empty string if not found
             "review_text": review.get('review_aspects_text', ""),
-            "owner_answer": review.get('owner_reply', ""),                # Handle missing 'owner_reply'
+            "owner_reply": review.get('owner_answer', ""),                # Handle missing 'owner_reply'
             "rating": rating,
             "name": review.get('author_name', "Anonymous"),              # Default name if missing
             "image": review.get('author_logo', "https://i.ibb.co/0Bsq8MC/user-image.png"),   
