@@ -71,7 +71,11 @@ def generate_reply(review_id):
     # Generate the response
     response = qa.run(prompt_template)
 
-    return response
+    pattern = r"\b(?:[Oo]utput|[Aa]nswer|Example_END):?\s*"
+    # Substitute the pattern with an empty string
+    cleaned_text = re.sub(pattern, "", response).strip()
+
+    return cleaned_text
 
 
 # def correct_reply(reply_text):
@@ -138,8 +142,7 @@ def correct_reply(reply_text):
     response = model.generate(prompt_template)['results'][0]['generated_text']
 
      # Define a regular expression pattern to match "Output:", "output:", "Answer:", "answer:"
-    pattern = r"\b(?:[Oo]utput|[Aa]nswer):\s*"
-    
+    pattern = r"\b(?:[Oo]utput|[Aa]nswer|Example_END):?\s*"
     # Substitute the pattern with an empty string
     cleaned_text = re.sub(pattern, "", response).strip()
 
