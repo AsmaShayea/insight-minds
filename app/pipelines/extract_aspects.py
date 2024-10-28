@@ -322,10 +322,10 @@ def handele_reviews_asepct_tags(reviews):
             )
 
 
-def extract_save_aspects(business_id: Optional[str] = None, url: Optional[str] = None):
+def extract_save_aspects(business_id: Optional[str] = None):
 
     # If `google_id` or `url` is provided, attempt to retrieve or create a new business ID
-    scrape_reviews(business_id, url)
+    scrape_reviews(business_id)
     
     print("hi2 bbbbbbbbb")
     reviews = reviews_collection.find({"business_id": business_id})

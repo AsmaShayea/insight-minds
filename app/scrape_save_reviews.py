@@ -33,10 +33,10 @@ def is_arabic(text):
 
 
 
-def scrape_reviews(business_id, url):
+def scrape_reviews(business_id):
 
     existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
-    google_id = str(existing_business["google_id"])  # Converts ObjectId to string
+    google_id = str(existing_business["google_id"])  # Ensure google_id is string
 
 
     # Scraping Google reviews using the business name and location

@@ -60,20 +60,21 @@ def create_new_business():
         "progress_status": "scrapping_reviews"
     }
     
-    business_id = business_collection.insert_one(business_data).inserted_id
+    obj_business_id = business_collection.insert_one(business_data).inserted_id
+    business_id = str(obj_business_id)
 
     
     return business_id
 
 # do process at background
-def background_task(business_id: Optional[str] = None, url: Optional[str] = None):
+def background_task(business_id: Optional[str] = None):
 
     task_status[business_id] = "running"
     try:
-        extract_save_aspects(business_id, url)  # Simulate a long-running task
+        extract_save_aspects(business_id)  # Simulate a long-running task
 
         # Simulate a background task (e.g., scraping)
-        print(f"Scraping {url} for business {business_id}")
+        print(f"Scraping for business {business_id}")
         task_status[business_id] = "completed"
 
     except Exception as e:
@@ -95,7 +96,7 @@ def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = Non
     else:
         business_id = create_new_business()
 
-    background_tasks.add_task(background_task, business_id, url)
+    background_tasks.add_task(background_task, business_id)
     return {"status": "success", "business_id":business_id,"message": f"Business {google_id} started scraping {url}"}
 
 # Define the Pydantic model for the request body
