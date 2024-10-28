@@ -13,6 +13,7 @@ from .pipelines.extract_aspects import extract_save_aspects, handele_reviews_ase
 from bson import ObjectId
 import math
 from typing import Optional
+from .get_google_id import process_url
 
 app = FastAPI()
 
@@ -53,28 +54,49 @@ else:
 #### 1- First API (Add new business data) Started
 task_status = {}
 
-# do process at background
-def background_task(google_id: Optional[str] = None, url: Optional[str] = None):
+def create_new_business():
 
-    task_status[google_id] = "running"
+    business_data = {
+        "progress_status": "scrapping_reviews"
+    }
+    
+    business_id = business_collection.insert_one(business_data).inserted_id
+
+    
+    return business_id
+
+# do process at background
+def background_task(business_id: Optional[str] = None, url: Optional[str] = None):
+
+    task_status[business_id] = "running"
     try:
-        extract_save_aspects(google_id, url)  # Simulate a long-running task
+        extract_save_aspects(business_id, url)  # Simulate a long-running task
 
         # Simulate a background task (e.g., scraping)
-        print(f"Scraping {url} for business {google_id}")
-        task_status[google_id] = "completed"
+        print(f"Scraping {url} for business {business_id}")
+        task_status[business_id] = "completed"
 
     except Exception as e:
         # Mark task as failed if an error occurs
-        task_status[google_id] = "failed"
-        print(f"Error in task {google_id}: {e}")
+        task_status[business_id] = "failed"
+        print(f"Error in task {business_id}: {e}")
 
 
 # Start the background task
 def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = None, url: Optional[str] = None):
-    
-    background_tasks.add_task(background_task, google_id, url)
-    return {"status": "success","message": f"Business {google_id} started scraping {url}"}
+
+    if not google_id:
+        google_id = process_url(url)
+
+    existing_business = business_collection.find_one({"google_id": google_id})
+    if existing_business:
+        business_id = str(existing_business["_id"])  # Converts ObjectId to string
+
+    else:
+        business_id = create_new_business()
+
+    background_tasks.add_task(background_task, business_id, url)
+    return {"status": "success", "business_id":business_id,"message": f"Business {google_id} started scraping {url}"}
 
 # Define the Pydantic model for the request body
 class BusinessRequest(BaseModel):
@@ -83,6 +105,7 @@ class BusinessRequest(BaseModel):
 
 @app.post("/scrape-extract-aspects")
 async def add_new_business(background_tasks: BackgroundTasks, request: BusinessRequest):
+
     response = start_task(background_tasks, request.google_id, request.url)
     return response
 

@@ -29,23 +29,16 @@ def is_arabic(text):
         return False
 
 
-def create_new_business():
-
-    business_data = {
-        "progress_status": "scrapping_reviews"
-    }
-    
-    business_id = business_collection.insert_one(business_data).inserted_id
-
-    
-    return business_id
 
 
 
-def scrape_reviews(google_id, url):
 
-    if not google_id:
-        google_id = process_url(url)
+def scrape_reviews(business_id, url):
+
+    existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
+    google_id = str(existing_business["google_id"])  # Converts ObjectId to string
+
+
     # Scraping Google reviews using the business name and location
     results = api_client.google_maps_reviews(google_id, 
         reviews_limit=10, 
@@ -56,41 +49,31 @@ def scrape_reviews(google_id, url):
     # Save business and reviews data into DB
     for place in results:
         # Check if the place already exists in the database by place_id
-        existing_business = business_collection.find_one({"google_id": place['google_id']})
         reviews = place['reviews_data']
-
-        if existing_business:
-            business_id = str(existing_business["_id"])  # Converts ObjectId to string
-            print("Business ID found:", business_id)
-        
-        else:
-
-            business_id = create_new_business()
-            existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
-            # If the place doesn't exist, insert it into the database
-            business_data = {
-                "name": place['name'],
-                "place_id": place['place_id'],
-                "google_id": place['google_id'],
-                "full_address": place['full_address'],
-                "country": place['country'],
-                "city": place['city'],
-                "popular_times": place['popular_times'],
-                "logo": place['logo'],
-                "description": place['description'],
-                "category": place['category'],
-                "type": place['type'],
-                "subtypes": place['subtypes'],
-                "rating": place['rating'],
-                "progress_status": "scrapping_reviews",
-            }
-            # Update the document with a matching place_id
-            business_collection.update_one(
-                {"_id": ObjectId(business_id)},  # Filter to match the document
-                {"$set": business_data},  # Update the document with new data
-                upsert=True  # If the document doesn't exist, insert it
-            )
-            print(f"Added business with business_id {business_id} to the database.")
+        # If the place doesn't exist, insert it into the database
+        business_data = {
+            "name": place['name'],
+            "place_id": place['place_id'],
+            "google_id": place['google_id'],
+            "full_address": place['full_address'],
+            "country": place['country'],
+            "city": place['city'],
+            "popular_times": place['popular_times'],
+            "logo": place['logo'],
+            "description": place['description'],
+            "category": place['category'],
+            "type": place['type'],
+            "subtypes": place['subtypes'],
+            "rating": place['rating'],
+            "progress_status": "scrapping_reviews",
+        }
+        # Update the document with a matching place_id
+        business_collection.update_one(
+            {"_id": ObjectId(business_id)},  # Filter to match the document
+            {"$set": business_data},  # Update the document with new data
+            upsert=True  # If the document doesn't exist, insert it
+        )
+        print(f"Added business with business_id {business_id} to the database.")
 
         
         for review in reviews:
