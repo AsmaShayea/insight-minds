@@ -67,11 +67,11 @@ def create_new_business():
     return business_id
 
 # do process at background
-def background_task(business_id: Optional[str] = None):
+def background_task(business_id, google_id):
 
     task_status[business_id] = "running"
     try:
-        extract_save_aspects(business_id)  # Simulate a long-running task
+        extract_save_aspects(business_id, google_id)  # Simulate a long-running task
 
         # Simulate a background task (e.g., scraping)
         print(f"Scraping for business {business_id}")
@@ -96,8 +96,8 @@ def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = Non
     else:
         business_id = create_new_business()
 
-    background_tasks.add_task(background_task, business_id)
-    return {"status": "success", "business_id":business_id,"message": f"Business {google_id} started scraping {url}"}
+    background_tasks.add_task(background_task, business_id, google_id)
+    return {"status": "started", "business_id":business_id,"message": f"Business {google_id} started scraping {url}"}
 
 # Define the Pydantic model for the request body
 class BusinessRequest(BaseModel):

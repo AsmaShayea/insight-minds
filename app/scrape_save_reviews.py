@@ -33,11 +33,7 @@ def is_arabic(text):
 
 
 
-def scrape_reviews(business_id):
-
-    existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
-    google_id = str(existing_business["google_id"])  # Ensure google_id is string
-
+def scrape_reviews(business_id, google_id):
 
     # Scraping Google reviews using the business name and location
     results = api_client.google_maps_reviews(google_id, 
@@ -45,6 +41,8 @@ def scrape_reviews(business_id):
         ignore_empty=True,
         language='ar'
     )
+
+    existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
 
     # Save business and reviews data into DB
     for place in results:
