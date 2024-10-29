@@ -42,7 +42,6 @@ def scrape_reviews(business_id, google_id):
         language='ar'
     )
 
-    existing_business = business_collection.find_one({"_id": ObjectId(business_id)})
 
     # Save business and reviews data into DB
     for place in results:

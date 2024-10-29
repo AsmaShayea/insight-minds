@@ -267,10 +267,7 @@ def save_aspects_data(reviews, business_id):
                     error_id = errors_log_collection.insert_one(error_data).inserted_id
                 print(f"Error parsing JSON: {e}")
 
-            business_collection.update_one(
-                {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
-                {"$set": {"progress_status": "completed"}}  # Set the new progress status
-            )
+
         else:
             print('done')
 
@@ -281,6 +278,11 @@ def save_aspects_data(reviews, business_id):
                 {"$set": {"is_analyzed": "true"}}  # Set is_analyzed to True
             )
             is_review_analyzed = "true"
+
+    business_collection.update_one(
+        {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
+        {"$set": {"progress_status": "completed"}}  # Set the new progress status
+    )
 
     print("done")
 

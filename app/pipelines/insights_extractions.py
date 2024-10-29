@@ -98,15 +98,19 @@ def generate_insights_text(business_id):
         # # Create the vector store from the retrieved data
     # summary_vector_store = setup_summary_vector_store()
     # retriever = summary_vector_store.as_retriever()
-
+    print("start prompt summary00") 
     # Prepare summary prompt using retrieved data
     summary_prompt = prepare_summary_prompt(business_id)
 
     # Use the cached retriever
     retriever = VectorStoreCache.get_retriever("text_summary")
 
+    print("start prompt summary11")
+
     # Initialize the RetrievalQA chain
     qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
+
+    print("start prompt summary22")
 
     # Run the query and get insights
     response = qa.run(summary_prompt)
@@ -116,6 +120,7 @@ def generate_insights_text(business_id):
     recommendations_match = re.search(recommendations_pattern, response, re.DOTALL)
     ideas_match = re.search(ideas_pattern, response, re.DOTALL)
 
+    print("start prompt summary33")
     # Ensure sections are not empty
     if (summary_match and summary_match.group(1).strip()) or \
        (recommendations_match and recommendations_match.group(1).strip()) or \
@@ -153,6 +158,8 @@ def generate_insights_text(business_id):
     else:
         print("No valid data found to insert.")
     
+
+    print("start prompt summary 44")
     # # Create JSON object with catchy headings
     # extracted_data = {
     #     "summary": f"""
