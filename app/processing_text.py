@@ -257,7 +257,10 @@ def wrap_words_with_span(text):
 
     return wrapped_text.strip()
 
-
+# Step 2: Tokenization
+def tokenize_text(text):
+    tokens = simple_word_tokenize(text)
+    return tokens
 
 def get_original_token(text, mapping):
     # Tokenize the input text

@@ -121,8 +121,8 @@ def serialize_business_data(business):
         "progress_message": progress_message,
         "progress_percentage": progress_percentage,
         "category": business.get("category"),
-        "name": business.get("name"),
-        "logo": business.get("logo"),
+        "name": business.get("name", "New loading.."),
+        "logo": business.get("logo", "https://i.ibb.co/ZxCr1Sk/Union.jpg"),
         "progress_status": business.get("progress_status"),
         "is_my_business": business.get("is_my_business")  # Include is_my_business
     }
