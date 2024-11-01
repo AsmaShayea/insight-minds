@@ -200,7 +200,6 @@ def get_top_aspects_and_opinions(business_id):
 
 
 def get_aspect_counts_by_month(business_id):
-
     # Fetch all reviews and aspects
     reviews_data = list(reviews_collection.find({
         "business_id": business_id  # Filter by business_id
@@ -211,7 +210,6 @@ def get_aspect_counts_by_month(business_id):
         "business_id": business_id                    # Filter by business_id
     }))
 
-
     # Convert the data to Pandas DataFrames
     reviews_df = pd.DataFrame(reviews_data)
     aspects_df = pd.DataFrame(aspects_data)
@@ -220,7 +218,7 @@ def get_aspect_counts_by_month(business_id):
     reviews_df['review_datetime_utc'] = pd.to_datetime(reviews_df['review_datetime_utc'], errors='coerce')
 
     # Extract month and year
-    reviews_df['month'] = reviews_df['review_datetime_utc'].dt.strftime('%B')  # Month name
+    reviews_df['month'] = reviews_df['review_datetime_utc'].dt.month  # Month as integer
     reviews_df['year'] = reviews_df['review_datetime_utc'].dt.year
 
     # Merge aspects with reviews on 'review_id'
@@ -231,6 +229,14 @@ def get_aspect_counts_by_month(business_id):
 
     # Group by year, month, and polarity, then count occurrences
     grouped = filtered_df.groupby(['year', 'month', 'polarity']).size().unstack(fill_value=0).reset_index()
+
+    # Define month order from January to December
+    month_order = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+                   7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    grouped['month'] = grouped['month'].map(month_order)
+
+    # Sort by year and month order
+    grouped = grouped.sort_values(by=['year', 'month'], key=lambda x: x.map(month_order))
 
     # Prepare the JSON response
     result = []
@@ -244,161 +250,3 @@ def get_aspect_counts_by_month(business_id):
 
     # Directly return the JSON response
     return result
-
-# # Call the function (for testing purposes)
-# json_result = get_aspect_counts_by_month()
-# print(json_result)
-
-# def get_aspect_category_sentiment_analysis():
-#     # Step 1: Initialize containers to store counts for each category
-#     category_counts = defaultdict(lambda: {'positive': 0, 'negative': 0, 'total': 0})
-
-#     # Step 2: Fetch data from the collection and group by category
-#     aspects_data = aspects_collection.find({
-#         "polarity": {"$nin": ["mixed", "neutral"]}  # Exclude mixed and neutral
-#     })
-
-#     for aspect in aspects_data:
-#         category = aspect['category']  # Assuming 'category' field exists
-#         polarity = aspect['polarity']
-
-#         # Update counts for the category
-#         if polarity == 'positive':
-#             category_counts[category]['positive'] += 1
-#         elif polarity == 'negative':
-#             category_counts[category]['negative'] += 1
-
-#         # Update total count for the category
-#         category_counts[category]['total'] += 1
-
-#     # Step 3: Calculate percentages and prepare the result
-#     results = []
-#     for category, counts in category_counts.items():
-#         total = counts['total']
-#         positive_count = counts['positive']
-#         negative_count = counts['negative']
-
-#         positive_percentage = (positive_count / total) * 100 if total > 0 else 0
-#         negative_percentage = (negative_count / total) * 100 if total > 0 else 0
-
-#         results.append({
-#             'category': category,
-#             'positive_count': positive_count,
-#             'positive_percentage': round(positive_percentage, 2),
-#             'negative_count': negative_count,
-#             'negative_percentage': round(negative_percentage, 2),
-#             'total_reviews': total
-#         })
-
-#     # Step 4: Return the final grouped results
-#     return results
-
-# #1- Calculate Average Sentiment
-# # Get all aspects related to reviews
-# aspects = aspects_collection.find()
-# polarity_scores = []
-
-# for aspect in aspects:
-#     # Convert polarity_score to float
-#     polarity_score = float(aspect["polarity_score"].replace("+", ""))
-#     # print(polarity_score)
-#     polarity_scores.append(polarity_score)
-
-# # Calculate average sentiment
-# average_sentiment_score = np.mean(polarity_scores)
-
-# if(average_sentiment_score > 0.50):
-#     average_sentiment = "positive"
-# elif(average_sentiment_score < 0.50):
-#     average_sentiment = "negative"
-# else:
-#     average_sentiment = "neutral"
-    
-# print(f"Average Sentiment Score: {average_sentiment_score:.2f}")
-# print(f"Average Sentiment: {average_sentiment}")
-
-
-# # Retrieve reviews with their associated aspect sentiments
-# reviews = reviews_collection.find()
-# sentiments_over_time = []
-
-# for review in reviews:
-#     review_date = pd.to_datetime(review["review_datetime_utc"], format="%m/%d/%Y %H:%M:%S")
-#     review_id = review["review_id"]
-
-#     # Find aspects for this review
-#     aspects_for_review = aspects_collection.find({"review_id": review_id})
-    
-#     # Calculate average polarity score for this review
-#     review_polarity_scores = [float(aspect["polarity_score"].replace("+", "")) for aspect in aspects_for_review]
-#     if review_polarity_scores:
-#         average_review_sentiment = np.mean(review_polarity_scores)
-#         sentiments_over_time.append((review_date, average_review_sentiment))
-
-# # Create a DataFrame for plotting
-# sentiment_df = pd.DataFrame(sentiments_over_time, columns=["date", "sentiment"])
-# sentiment_df.set_index("date", inplace=True)
-
-# # Resample by day and calculate the mean sentiment
-# daily_sentiment = sentiment_df.resample("D").mean()
-
-# # Plotting
-# plt.figure(figsize=(12, 6))
-# plt.plot(daily_sentiment.index, daily_sentiment["sentiment"], marker='o')
-# plt.title("Average Sentiment Over Time")
-# plt.xlabel("Date")
-# plt.ylabel("Average Sentiment Score")
-# plt.grid()
-# plt.xticks(rotation=45)
-# plt.tight_layout()
-# plt.show()
-
-
-
-# # 2- Track Sentiment Over Time
-
-
-# # Retrieve reviews with their associated aspect sentiments
-# reviews = reviews_collection.find()
-# sentiments_over_time = []
-
-# for review in reviews:
-#     review_date = pd.to_datetime(review["review_datetime_utc"], format="%m/%d/%Y %H:%M:%S")
-#     review_id = review["review_id"]
-
-#     # Find aspects for this review
-#     aspects_for_review = aspects_collection.find({"review_id": review_id})
-    
-#     # Calculate average polarity score for this review
-#     review_polarity_scores = [float(aspect["polarity_score"].replace("+", "")) for aspect in aspects_for_review]
-#     if review_polarity_scores:
-#         average_review_sentiment = np.mean(review_polarity_scores)
-
-#         # Categorize sentiment
-#         if average_review_sentiment > 0.1:  # Adjust threshold as necessary
-#             sentiment_category = 'positive'
-#         elif average_review_sentiment < -0.1:  # Adjust threshold as necessary
-#             sentiment_category = 'negative'
-#         else:
-#             sentiment_category = 'neutral'
-        
-#         sentiments_over_time.append((review_date, sentiment_category))
-
-# # Create a DataFrame for sentiment counts
-# sentiment_df = pd.DataFrame(sentiments_over_time, columns=["date", "sentiment"])
-# sentiment_df.set_index("date", inplace=True)
-
-# # Count occurrences of each sentiment per month
-# monthly_sentiment_counts = sentiment_df.groupby([sentiment_df.index.to_period("M"), 'sentiment']).size().unstack(fill_value=0)
-
-# # Plotting
-# plt.figure(figsize=(12, 6))
-# monthly_sentiment_counts.plot(kind='line', marker='o', color=['green', 'red', 'gray'])  # Green for positive, Red for negative, Gray for neutral
-# plt.title("Monthly Sentiment Change")
-# plt.xlabel("Month")
-# plt.ylabel("Count of Sentiments")
-# plt.grid()
-# plt.xticks(rotation=45)
-# plt.legend(title='Sentiment', labels=['Positive', 'Negative', 'Neutral'])
-# plt.tight_layout()
-# plt.show()

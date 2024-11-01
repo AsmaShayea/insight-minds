@@ -1,52 +1,96 @@
+
 import nltk
 from nltk.corpus import stopwords
-from camel_tools.utils.normalize import normalize_alef_maksura_ar
-from camel_tools.utils.normalize import normalize_alef_ar
-from camel_tools.utils.normalize import normalize_teh_marbuta_ar
+from camel_tools.utils.normalize import normalize_alef_maksura_ar, normalize_alef_ar, normalize_teh_marbuta_ar
 from camel_tools.utils.dediac import dediac_ar
 from camel_tools.morphology.database import MorphologyDB
 from camel_tools.morphology.analyzer import Analyzer
-import string
 import re
 from camel_tools.tokenizers.word import simple_word_tokenize
 from camel_tools.disambig.mle import MLEDisambiguator
-from camel_tools.utils.dediac import dediac_ar
+import string
 import json
 
 nltk.download('stopwords')
 
+# Initialize resources
 db = MorphologyDB.builtin_db()
 analyzer = Analyzer(db)
+stop_words = set(stopwords.words())  # Faster look-up with set
+negation_words = {'لا', 'لم', 'ما', 'لن'}
+important_stopwords = {'المكان', 'مكان'}
 
 # Example Arabic stopwords
 stop_words = stopwords.words()
 
-# Step 1: Normalization
-def normalize_text(text):
-    # Normalize alef variants to 'ا'
-    text = normalize_alef_ar(text)
-    # Normalize alef maksura 'ى' to yeh 'ي'
-    text = normalize_alef_maksura_ar(text)   
-    # Normalize teh marbuta 'ة' to heh 'ه'
-    text = normalize_teh_marbuta_ar(text)
-    # Normalize teh marbuta 'ة' to heh 'ه'
-    text = normalize_teh_marbuta_ar(text)
-    return text
 
-# Step 1: Normalization
-def normalize_token(tokens):
-    normalized_tokens = []
-    for token in tokens:
-        token = normalize_text(token)
-        normalized_tokens.append(token)
-    return normalized_tokens
+def clean_result(input_value):
+    # Function to remove undesired substrings
+    def remove_undesired(text):
+        cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
+        cleaned_text = re.sub(r"NOT_", "", text)  # Remove "Place_"
+        cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
+        cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)
+        return cleaned_text.strip()
     
-# Step 2: Tokenization
-def tokenize_text(text):
-    tokens = simple_word_tokenize(text)
-    return tokens
+    # Check if the input is a list (array)
+    if isinstance(input_value, list):
+        # Apply the cleaning function to each element in the list
+        return [remove_undesired(item) for item in input_value if isinstance(item, str)]
+    
+    # If the input is a single string, clean it directly
+    elif isinstance(input_value, str):
+        return remove_undesired(input_value)
+    
+    # Return None or input as-is if it's neither string nor list
+    return input_value
 
-# Step 3: Cleaning (Remove elongations, special characters, numbers, punctuation)
+
+# Step 5: Lemmatization using Analyzer
+def get_root_word(word):
+    
+    #remove tashkeel
+    cleaned_word = dediac_ar(word)
+
+    #noemalize
+    cleaned_word = normalize_text(cleaned_word)
+    cleaned_word = dediac_ar(cleaned_word)
+
+    #lemmatized
+    analyses = analyzer.analyze(word)
+    if analyses:
+        cleaned_word = analyses[0]['lex']
+    
+    else:
+        # Handle the case where no analysis was found
+        cleaned_word = cleaned_word  # Or any fallback mechanism you prefer
+
+
+    cleaned_word = normalize_text(cleaned_word)
+    cleaned_word = dediac_ar(cleaned_word)
+    
+
+    return cleaned_word
+
+
+def extract_aspect_data(generated_text):
+
+    aspect_data_list = []
+
+    # Regular expression to match each aspect object, focusing on "phrases"
+    pattern = r'\{\s*"aspect":\s*[^{}]*"opinions":\s*\[[^\]]*\]\s*\}'
+    
+    # Find all matches
+    aspects_data = re.findall(pattern, generated_text, re.DOTALL)
+
+    for aspect_data in aspects_data:
+        aspect_data = aspect_data.strip()
+
+        aspect_data_to_save = json.loads(aspect_data)
+        aspect_data_list.append(aspect_data_to_save)
+    return aspect_data_list
+
+
 def clean_text(tokens):
     cleaned_tokens = []
     for token in tokens:
@@ -61,198 +105,135 @@ def clean_text(tokens):
         cleaned_tokens.append(token)
     
     return cleaned_tokens
-
-def remove_tashkeel(tokens):
-    new_tokens = []
-    for token in tokens:
-        token = dediac_ar(token)
-        new_tokens.append(token)
-    return new_tokens
-
-# Step 4: Stopword Removal (replace stopwords with empty string)
-def remove_stopwords(tokens):
-    return [token if token not in stop_words else "" for token in tokens]
-
-# Step 5: Lemmatization using Analyzer
-def lemmatize_tokens(tokens):
-    token_original_mapping = []  # Dictionary to hold token-original pairs
-    
-    for token in tokens:
-        
-        analyses = analyzer.analyze(token)  # Analyze the word
-        
-        # Collect unique lemmas from the analysis
-        lemmas = set()  # Use a set to avoid duplicates
-        for analysis in analyses:
-            lemmas.add(analysis['lex'])  # 'lex' key contains the lemma
-
-        # If lemmas exist, add the first lemma to lemmatized tokens
-        if lemmas:
-            lemmatized_token = list(lemmas)[0]  # Use the first lemma
-            # lemmatized_token = dediac_ar(lemmatized_token)
-            token_original_mapping.append((lemmatized_token, token))
-
-        else:
-            token_original_mapping.append((token, token))
-        
-    return token_original_mapping  # Return the mapping dictionary
-
-#Step 6: Negation Handling
-def handle_negation(tokens):
-    negation_words = ['لا', 'لم', 'ما', 'لن']
-    negation_active = False
-    final_tokens = []
-    
-    for token in tokens:
-        if token in negation_words:
-            negation_active = True
-        else:
-            if negation_active:
-                token = 'NOT_' + token  # Add a marker for negation
-                negation_active = False
-            final_tokens.append(token)
-    
-    return final_tokens
-
-# # Step 6: Negation Handling
-# def handle_negation(tokens):
-#     negation_words = ['لا', 'لم', 'ما', 'لن']
-#     final_tokens = []
-    
-#     for token in tokens:
-#         if token in negation_words:
-#             token = 'NOT_'
-            
-#         final_tokens.append(token)
-    
-#     return final_tokens
-
-# Step 6: Negation Handling
-def handle_specific_words(tokens):
-    important_stopword = ["المكان","مكان"]
-    final_tokens = []
-    
-    for token in tokens:
-        processed_text = normalize_text(token)
-        processed_text = dediac_ar(processed_text)
-    
-        if processed_text in important_stopword:
-            token = 'Place_' + token
-        
-        final_tokens.append(token)
-         
-    return final_tokens
-
-# Function to reconstruct text from lemmatized tokens
-def reconstruct_text(tokens, token_mapping):
-    reconstructed = []
-
-    for token in tokens:
-        if "NOT_" in token:
-            cleaned_token = token.replace("NOT_", "").strip()
-            if any(key == cleaned_token for key, val in token_mapping):
-                found_value = next((value for key, value in token_mapping if key == cleaned_token), None)
-                token = 'NOT_' + found_value
-                reconstructed.append(token)
-            else:
-                reconstructed.append(token)  # Keep it as is if not found
-        elif any(key == token for key, val in token_mapping):
-            # token = next((value for key, value in token_mapping if key == token), None)
-            # reconstructed.append(token)
-  
-            # Find the key-value pair where the token matches the key
-            key_value_pair = next(((key, value) for key, value in token_mapping if key == token), None)
-            
-            if key_value_pair:
-                key, value = key_value_pair  # Extract both key and value
-                token = value  # Replace the token with the corresponding value
-                reconstructed.append(token)
-                
-                # Remove the first occurrence of the key-value pair from token_mapping
-                token_mapping.remove(key_value_pair)
-        else:
-            reconstructed.append(token)  # Keep it as is if not found
-    return reconstructed
-
-
-# def handle_negation(tokens):
-#     negation_words = ['لا', 'لم', 'ما', 'لن']
-#     negation_word = ""
-#     final_tokens = []
-#     orig_tokens = []
-    
-#     for token in tokens:
-#         orig_token = token
-
-#         if token in negation_words:
-#             negation_word = token
-#         else:
-#             if negation_word != "":
-#                 orig_token = negation_word + " " + token
-#                 token = "NOT" + '_' + token  # Add a marker for negation
-#                 negation_word = ""
-#             final_tokens.append(token)
-#             orig_tokens.append(orig_token)
-    
-#     return final_tokens, orig_tokens
     
 # Combined Preprocessing Function
 def preprocess_arabic_text(text):
-
+    # Initial cleanup of spaces
     text = text.replace('\n', ' ').replace('\r', ' ')
     # Replace multiple spaces with a single space
     text = re.sub(' +', ' ', text)
+    text = re.sub(r'[^\w\s]', '', text)  # Removes all punctuation
 
     
-    # Step 2: Tokenization
-    original_tokens = tokenize_text(text)
+    # Tokenization
+    tokens = simple_word_tokenize(text)
 
-    # Step 3: Cleaning
-    tokens = clean_text(original_tokens)
+    text = clean_text(text)
+    
+    processed_tokens = []
+    token_mapping = []  # To store original-to-processed token mapping
+
+    # Negation state tracking
+    negation_active = False
+
+    for token in tokens:
+        original_token = token  # Preserve original token for mapping
+
+        # Step 1: Normalization
+        # Normalize alef variants to 'ا'
+        token = normalize_alef_ar(token)
+        # Normalize alef maksura 'ى' to yeh 'ي'
+        token = normalize_alef_maksura_ar(token)   
+        # Normalize teh marbuta 'ة' to heh 'ه'
+        token = normalize_teh_marbuta_ar(token)
+        # Normalize teh marbuta 'ة' to heh 'ه'
+        token = normalize_teh_marbuta_ar(token)
+        
+        # Step 2: Remove diacritics (Tashkeel)
+        token = dediac_ar(token)
+    
+
+        # Step 4: Lemmatization
+        lemmas = {analysis['lex'] for analysis in analyzer.analyze(token)}
+        if lemmas:
+            lemmitized_token = dediac_ar(list(lemmas)[0])  # Take the first lemma if available
+        else:
+            lemmitized_token = token
+    
+
+        # Step 4: Lemmatization
+        lemmas = {analysis['lex'] for analysis in analyzer.analyze(token)}
+        if lemmas:
+            lemmitized_token = dediac_ar(list(lemmas)[0])  # Take the first lemma if available
+
+
+        # Step 4: Negation Handling
+        if lemmitized_token in negation_words:
+            negation_word = token
+            negation_active = True
+            continue  # Skip adding the negation word itself
+
+        if negation_active:
+            original_token = negation_word + token
+            token = f'NOT_{token}'
+            negation_active = False  # Reset negation status
+
+
+        # Step 5: Stopword Removal (skip if a stopword)
+        if lemmitized_token in stop_words:
+            continue
+
+        # Step 7: Specific Word Handling
+        if lemmitized_token in important_stopwords:
+            token = f'Place_{token}'
+
 
     
-    # tokens, original_tokens = handle_negation(tokens)
+        # Add the processed token to the final list and mapp
 
-    # Step 1: Normalization
-    tokens = normalize_token(tokens)
 
-    # remove tashkeel
-    tokens = remove_tashkeel(tokens)
+        # Step 4: Negation Handling
+        if lemmitized_token in negation_words:
+            negation_word = token
+            negation_active = True
+            continue  # Skip adding the negation word itself
+
+        if negation_active:
+            original_token = negation_word + token
+            token = f'NOT_{token}'
+            negation_active = False  # Reset negation status
+
+
+        # Step 5: Stopword Removal (skip if a stopword)
+        if lemmitized_token in stop_words:
+            continue
+
+        # Step 7: Specific Word Handling
+        if lemmitized_token in important_stopwords:
+            token = f'Place_{token}'
+
 
     
-    # Step 5: Lemmatization
-    token_mapping = lemmatize_tokens(tokens)  # Get the mapping of lemmatized to original tokens  
+        # Add the processed token to the final list and mapping
+        processed_tokens.append(token)
+        token_mapping.append((original_token, token))
 
-    # Use the lemmatized tokens for further processing
-    tokens = [token[0] for token in token_mapping]  # Get only the lemmatized tokens
+    # Join the processed tokens into a single string
+    preprocessed_text = ' '.join(processed_tokens)
 
-    
-    # # Step 6: Negation Handling
-    tokens = handle_negation(tokens)
+    return preprocessed_text, token_mapping
+
+def get_original_token(processed_token, token_mapping):
+    # Tokenize the processed token
+    tokens = simple_word_tokenize(processed_token)
+    original_tokens = []
+
+    # Search for each token in the token mapping
+    for token in tokens:
+        found = False
+        for original, processed in token_mapping:
+            if processed == token:
+                original_tokens.append(original)
+                found = True
+                break
+        if not found:
+            original_tokens.append(token)  # Keep the token as is if not found in mapping
+
+    # Join the original tokens back into a single string
+    return ' '.join(original_tokens)
 
 
 
-    # Step 4: Stopword Removal
-    tokens = remove_stopwords(tokens)
-    
-    preprocessed_text = ' '.join(tokens)
-    
-    reconstruct_tokens = reconstruct_text(tokens, token_mapping)
-
-    token_mapping = []
-    
-    # Ensure we map only existing tokens
-    for token, original in zip(reconstruct_tokens, original_tokens):
-        token_mapping.append((token,original))
-
-    # Step 6: Negation Handling
-    reconstruct_tokens = handle_specific_words(reconstruct_tokens)
-    # print("token_mapping",token_mapping)
-    reconstruct_review = ' '.join(reconstruct_tokens)
-    reconstruct_review = re.sub(r'\s+', ' ', reconstruct_review).strip()
-    print("reconstruct_review123", reconstruct_review)
-    
-    return reconstruct_review, token_mapping
 
 
 

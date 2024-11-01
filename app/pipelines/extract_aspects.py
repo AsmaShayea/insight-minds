@@ -4,8 +4,9 @@ from app.processing_text import preprocess_arabic_text, extract_aspect_data, get
 import json
 from app.model_singleton import ModelSingleton
 from app.scrape_save_reviews import scrape_reviews
-from app.processing_text import wrap_words_with_span
+from app.processing_text import wrap_words_with_span, clean_result
 from bson.objectid import ObjectId
+from .insights_extractions import generate_insights_text
 import re
 from typing import Optional
 
@@ -40,7 +41,6 @@ Follow these steps for the task:
 10- Review your result before show it.
 11- once you retrievied "Outpu:" started with "[" and closed with "]", stop here and do not generating more.
 
-------------
 
 Example 1:
 Input: "المكان كسر الصورة النمطية عن باقي الأماكن.
@@ -106,7 +106,7 @@ Input: "هاذي أول زيارة لي لـ الكوفي ، أخذت قهوة �
 Output: 
 [
     {
-        "aspect": "القهوi",
+        "aspect": "القهوه",
         "polarity": "positive",
         "polarity_score": "+0.90",
         "opinions": ["رايقه", "مراره"]
@@ -175,26 +175,27 @@ def augment(prompt_template, review_text):
     return prompt_template % review_text
 
 
-def clean_result(input_value):
-    # Function to remove undesired substrings
-    def remove_undesired(text):
-        # Remove all instances of "Place_" and replace underscores with spaces
-        cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
-        cleaned_text = re.sub(r"NOT_", "", text)  # Remove "Place_"
-        cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
-        return cleaned_text.strip()
+# def clean_result(input_value):
+#     # Function to remove undesired substrings
+#     def remove_undesired(text):
+#         # Remove all instances of "Place_" and replace underscores with spaces
+#         cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
+#         cleaned_text = re.sub(r"NOT_", "", text)  # Remove "Place_"
+#         cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
+#         cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text).strip()
+#         return cleaned_text.strip()
     
-    # Check if the input is a list (array)
-    if isinstance(input_value, list):
-        # Apply the cleaning function to each element in the list
-        return [remove_undesired(item) for item in input_value if isinstance(item, str)]
+#     # Check if the input is a list (array)
+#     if isinstance(input_value, list):
+#         # Apply the cleaning function to each element in the list
+#         return [remove_undesired(item) for item in input_value if isinstance(item, str)]
     
-    # If the input is a single string, clean it directly
-    elif isinstance(input_value, str):
-        return remove_undesired(input_value)
+#     # If the input is a single string, clean it directly
+#     elif isinstance(input_value, str):
+#         return remove_undesired(input_value)
     
-    # Return None or input as-is if it's neither string nor list
-    return input_value
+#     # Return None or input as-is if it's neither string nor list
+#     return input_value
 
 
 # Save apects for each review to DB
@@ -278,6 +279,8 @@ def save_aspects_data(reviews, business_id):
                 {"$set": {"is_analyzed": "true"}}  # Set is_analyzed to True
             )
             is_review_analyzed = "true"
+
+    generate_insights_text(business_id)
 
     business_collection.update_one(
         {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field

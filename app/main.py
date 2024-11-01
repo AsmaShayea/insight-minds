@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from pydantic import BaseModel
 from .database import get_database
 from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments, get_top_aspects_and_opinions, get_aspect_counts_by_month
-from .pipelines.insights_extractions import generate_insights_text
+# from .pipelines.insights_extractions import generate_insights_text
 from .pipelines.generate_reply import generate_reply, get_instance, correct_reply
 from .processing_text import wrap_words_with_span
 from .pipelines.extract_aspects import extract_save_aspects, handele_reviews_asepct_tags
@@ -17,24 +17,16 @@ from .get_google_id import process_url
 
 app = FastAPI()
 
-# Define the origins that are allowed to make requests to your API
-origins = [
-    "https://blogapp556.herokuapp.com",  # Your Next.js app's domain
-    "http://localhost:3000",  # Local development domain for Next.js
-    "http://16.171.196.223:3000",
-    "http://insights-mind-7646dfe71e1b.herokuapp.com",
-]
-
 # Add the CORS middleware to the FastAPI app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows requests from specified domains
+    allow_origins=["*"],  # Allows requests from all domains
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"], 
+    allow_headers=["*"],  
 )
 
-# Initialize collections
+# Initialize database collections
 db = get_database()
 if db is not None:
     reviews_collection = db['reviews']
@@ -51,9 +43,10 @@ else:
 
 
 
-#### 1- First API (Add new business data) Started
+#### 1- First API (Add new business data with scrape reviews from ggogle busines , extract aspect and opinions) Started
 task_status = {}
 
+#create busines accoint in db
 def create_new_business():
 
     business_data = {
@@ -66,19 +59,19 @@ def create_new_business():
     
     return business_id
 
-# do process at background
+# do task at background
 def background_task(business_id, google_id):
 
     task_status[business_id] = "running"
     try:
-        extract_save_aspects(business_id, google_id)  # Simulate a long-running task
+        # Extract aspects, polarity, opinions 
+        extract_save_aspects(business_id, google_id)  
 
-        # Simulate a background task (e.g., scraping)
         print(f"Scraping for business {business_id}")
         task_status[business_id] = "completed"
 
     except Exception as e:
-        # Mark task as failed if an error occurs
+
         task_status[business_id] = "failed"
         print(f"Error in task {business_id}: {e}")
 
@@ -87,6 +80,7 @@ def background_task(business_id, google_id):
 def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = None, url: Optional[str] = None):
 
     if not google_id:
+        #extract gogle id from google map link
         google_id = process_url(url)
 
     existing_business = business_collection.find_one({"google_id": google_id})
@@ -99,7 +93,7 @@ def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = Non
     background_tasks.add_task(background_task, business_id, google_id)
     return {"status": "started", "business_id":business_id,"message": f"Business {google_id} started scraping {url}"}
 
-# Define the Pydantic model for the request body
+
 class BusinessRequest(BaseModel):
     google_id: Optional[str] = None
     url: Optional[str] = None
@@ -110,79 +104,7 @@ async def add_new_business(background_tasks: BackgroundTasks, request: BusinessR
     response = start_task(background_tasks, request.google_id, request.url)
     return response
 
-#### First API (Add new business data) End
-
-# Endpoint to start the background task
-# @app.post("/scrape-extract-aspects")
-# async def add_new(url: Optional[str] = None):
-
-#     start_task(url)
-# # Endpoint to start the background task
-# @app.post("/scrape-extract-aspects/{business_id}")
-# async def complete_task(background_tasks: BackgroundTasks, business_id: str, url: Optional[str] = None):
-#     # Start the background task
-#     background_tasks.add_task(background_task, business_id, url)
-    
-#     # Return immediate response
-#     return {"message": f"Business {business_id} started scraping {url}"}
-
-
-
-
-
-
-# @app.get("/get-business-data/{business_id}")
-# async def get_business_data(business_id: str):
-
-#     business_data = business_collection.find_one({"_id": ObjectId(business_id)})
-
-#     if not business_data.get('progress_status'):
-#         raise HTTPException(status_code=404, detail="Business not found")
-    
-#     if(business_data['progress_status'] == "completed"):
-
-#         return {
-#             "progress_status": "active",
-#             "my_business_data": {
-#                 "id": str(business_data["_id"]),  # Convert ObjectId to string
-#                 "category": business_data['category'],
-#                 "name": business_data['name'],
-#                 "logo": business_data['logo'],
-#                 "progress_status": business_data['progress_status']
-#             }
-#         }
-
-#     else:
-
-#         status = task_status.get(business_id, "not found")
-
-#         if(status == "failed"):
-#             return {
-#                 "progress_status": "error",
-#                 "message": "Task stopped for unrecognized error",
-#                 "progress_percentage": 0
-#             }
-
-#         else:
-#             # Check if the task is completed
-#             total_reviews = reviews_collection.count_documents({"business_id": business_id})
-#             analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
-        
-
-#             # Extracting the results
-#             if total_reviews > 0:
-#                 progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
-#             else:
-#                 progress_percentage = 0
-
-
-#             return {
-#                 "progress_status": "in_progress",
-#                 "message": "",
-#                 "progress_percentage": progress_percentage
-#             }
-
-
+#### 1- First API (Add new business data with scrape reviews from ggogle busines , extract aspect and opinions) End
 
 
 
@@ -211,7 +133,7 @@ async def get_businesses_data():
         if not business_data:
             raise HTTPException(status_code=404, detail="No businesses found")
 
-         # Split data into "my_business" and "other_business" based on "is_my_business" value
+        # Split data into "my_business" and "other_business" based on "is_my_business" value
         my_business = [business for business in business_data if business.get("is_my_business") == "true"]
         other_business = [business for business in business_data if business.get("is_my_business") != "true"]
         
@@ -225,34 +147,13 @@ async def get_businesses_data():
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
 #### Second API (Get all business list) End
 
-# def serialize_doc(doc):
-#     if isinstance(doc, ObjectId):
-#         return str(doc)
-#     if isinstance(doc, dict):
-#         return {k: serialize_doc(v) for k, v in doc.items()}
-#     return doc
-
-
-# Sample root endpoint
-@app.get("/")
-def read_root():
-    return {"Hello": "World13"}
-
-
-# @app.get("/check_model_cash")
-# def get_model_instance():
-#     msg = get_instance()
-
-#     return {"Hello": msg}
 
 
 
 #### 3- Third API (Get a business data and insights) Started
-# chaeck business loading data status
+# Check business loading data status
 def business_loading_status(business_id: str):
 
     business_data = business_collection.find_one({"_id": ObjectId(business_id)})
@@ -277,7 +178,7 @@ def business_loading_status(business_id: str):
 
         else:
             # Check if the task is completed
-            total_reviews = reviews_collection.count_documents({"business_id": business_id})
+            total_reviews = reviews_collection.count_documents({"business_id": business_id}) + 1
             analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
         
 
@@ -294,9 +195,12 @@ def business_loading_status(business_id: str):
     return progress_status, progress_message, progress_percentage
 
 
+
+# check if busines loadind is done, get all reviews and insight to show in dashboard
 @app.get('/insights/{business_id}')
 def getInsights(business_id: str):
     
+    #check loaded statud that started at background is done
     progress_status, progress_message, progress_percentage = business_loading_status(business_id)
     data = None
 
@@ -340,16 +244,15 @@ def get_reviews(business_id: str):
     if not business:
         return {"error": business_id}
     
-    # Get reviews for the business (limit to 50 reviews)
+    # Get reviews for the business (limit to 50 reviews - for test)
     reviews = list(reviews_collection.find({"business_id": business_id}).limit(50))
 
-    # Initialize arrays for different review types
     positive_reviews = []
     negative_reviews = []
     neutral_reviews = []
 
     for review in reviews:
-        # Get aspects for the review
+        # Get all aspects for the review
         aspects = list(aspects_collection.find({"review_id": review['review_id']}))
         review_text = review['review_text']
         aspect_details = []
@@ -359,18 +262,9 @@ def get_reviews(business_id: str):
             polarity_score = aspect['polarity_score']
             polarity = aspect['polarity']
 
-            # # Color-code the aspects
-            # if polarity == 'positive':
-            #     highlighted_aspect = f"<span style='color: green;'>{aspect_str}</span>"
-            # elif polarity == 'negative':
-            #     highlighted_aspect = f"<span style='color: red;'>{aspect_str}</span>"
-            # else:
-            #     highlighted_aspect = aspect_str
+         
 
-            # # Replace the aspect in the review text
-            # review_aspects_text = review_text.replace(aspect_str, highlighted_aspect)
-
-            # Add the aspect details to the list
+            # Show just positive and negative aspects
             if polarity in ["positive", "negative"]:
                 aspect_details.append({
                     "aspect": aspect_str,
@@ -448,7 +342,7 @@ async def correct_reply_endpoint(request: ReplyRequest):
 #### Sixth API (Correct current review) End
 
 
-#### Seventh API (Get Text Summary insights) Started
+#### Seventh API (Get Text Summary insights, recommendation, ideas) Started
 @app.get("/generate-text-insights/{business_id}")
 async def generate_insights(business_id: str):
     """
@@ -456,25 +350,24 @@ async def generate_insights(business_id: str):
     """
     insights_collection = get_database()['insights']  # Ensure this references the correct collection
 
-    # Fetch the insights document if it already exists
+    # Fetch the insights document if it is already exists
     insights = insights_collection.find_one({"business_id": business_id})
 
-    if insights is None:
-        print("No insights found for the given business ID.")
-        try:
-            # Generate and insert insights data if none exist
-            generate_insights_text(business_id)
-            # Re-fetch the inserted insights document to get the _id
-            insights = insights_collection.find_one({"business_id": business_id})
+    # if insights is None:
+    #     print("No insights found for the given business ID.")
+    #     try:
+    #         # Generate and insert insights data if none exist
+    #         generate_insights_text(business_id)
+    #         # Re-fetch the inserted insights document to get the _id
+    #         insights = insights_collection.find_one({"business_id": business_id})
 
-            if insights is None:
-                return {"status": "error", "message": "Failed to insert or retrieve new insights."}
+    #         if insights is None:
+    #             return {"status": "error", "message": "Failed to insert or retrieve new insights."}
 
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
+    #     except Exception as e:
+    #         return {"status": "error", "message": str(e)}
 
 
-    #Format the response with headings
     # Format the response with headings
     extracted_data = {
         "summary": "<h3><strong>ملخص تجربة العملاء</strong></h3>" + insights['data']['summary'].strip().replace('\n', '<br>'),
@@ -490,61 +383,3 @@ async def generate_insights(business_id: str):
         "data": extracted_data
     }
 #### Seventh API (Get Text Summary insights) End
-
-
-
-
-
-# #get insights
-# @app.get("/get-last-insight")
-# async def get_latest_insights():
-#     # Get the last document based on the extraction_date
-#     last_document = insights_collection.find().limit(1)
-    
-#     # Convert the cursor to a list and check if there's a document
-#     last_insight = list(last_document)
-    
-#     if last_insight:
-#         return {
-#             "id" : str(last_insight[0]['_id']),
-#             "data": last_insight[0]['data']
-#         }
-    
-#     return JSONResponse(content={"message": "No insights found."}, status_code=404)
-
-# #Get business setting data
-# @app.get("/get-business-details/{business_id}")
-# async def get_business_details(business_id):
-#     # Get the last document based on the extraction_date
-#     business_data = business_collection.find_one({"_id": ObjectId(business_id)})
-    
-#     # Convert the cursor to a list and check if there's a document
-    
-#     return {
-#         "id" : str(business_data['_id']),
-#         "name": business_data['name'],
-#         "full_address": business_data['full_address'],
-#         "city": business_data['city'],
-#         "description": business_data['description'],
-#         "logo": business_data['logo'],
-#         "category": business_data['category'],
-#         "type": business_data['type'],
-#         "subtypes": business_data['subtypes']
-
-#     }
-    
-# @app.get('/test')
-# def test():
-
-#     return{"status":"Done"}
-
-
-
-
-
-
-# #Realtime Scrape & get insights
-# # Sample scrape reviews endpoint
-# @app.get("/scrape-reviews")
-# def scrape_google_reviews():
-#     return {"Hello": "World15"}
