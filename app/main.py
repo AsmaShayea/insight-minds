@@ -113,7 +113,7 @@ async def add_new_business(background_tasks: BackgroundTasks, request: BusinessR
 # Helper function to serialize ObjectId to string and show only specific fields
 def serialize_business_data(business):
     
-    progress_status, progress_message, progress_percentage = business_loading_status( str(business["_id"]))
+    progress_status, progress_message, progress_percentage = business_loading_status(str(business["_id"]))
 
     return {
         "id": str(business["_id"]),  # Convert ObjectId to string
@@ -389,3 +389,24 @@ async def generate_insights(business_id: str):
         "data": extracted_data
     }
 #### Seventh API (Get Text Summary insights) End
+
+
+
+#### 8- Eighth API (Check a business data loading status) Started
+
+# check if busines loadind is done or not
+@app.get('/check-loading-status/{business_id}')
+def getInsights(business_id: str):
+    progress_status, progress_message, progress_percentage = business_loading_status(business_id)
+
+    return {
+        "id": business_id,  # Convert ObjectId to string
+        "progress_status": progress_status,
+        "progress_message": progress_message,
+        "progress_percentage": progress_percentage,
+    }
+
+
+
+
+#### 8- Eighth API (Check a business data loading status) End
