@@ -230,13 +230,15 @@ def get_aspect_counts_by_month(business_id):
     # Group by year, month, and polarity, then count occurrences
     grouped = filtered_df.groupby(['year', 'month', 'polarity']).size().unstack(fill_value=0).reset_index()
 
-    # Define month order from January to December
-    month_order = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
-                   7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    # Define month order in Arabic
+    month_order = {
+        1: 'يناير', 2: 'فبراير', 3: 'مارس', 4: 'أبريل', 5: 'مايو', 6: 'يونيو',
+        7: 'يوليو', 8: 'أغسطس', 9: 'سبتمبر', 10: 'أكتوبر', 11: 'نوفمبر', 12: 'ديسمبر'
+    }
     grouped['month'] = grouped['month'].map(month_order)
 
     # Sort by year and month order
-    grouped = grouped.sort_values(by=['year', 'month'], key=lambda x: x.map(month_order))
+    grouped = grouped.sort_values(by=['year', 'month'], key=lambda x: x.map({v: k for k, v in month_order.items()}))
 
     # Prepare the JSON response
     result = []
