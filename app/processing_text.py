@@ -45,6 +45,17 @@ def clean_result(input_value):
     # Return None or input as-is if it's neither string nor list
     return input_value
 
+# Step 1: Normalization
+def normalize_text(text):
+    # Normalize alef variants to 'ا'
+    text = normalize_alef_ar(text)
+    # Normalize alef maksura 'ى' to yeh 'ي'
+    text = normalize_alef_maksura_ar(text)   
+    # Normalize teh marbuta 'ة' to heh 'ه'
+    text = normalize_teh_marbuta_ar(text)
+    # Normalize teh marbuta 'ة' to heh 'ه'
+    text = normalize_teh_marbuta_ar(text)
+    return text
 
 # Step 5: Lemmatization using Analyzer
 def get_root_word(word):
@@ -52,7 +63,7 @@ def get_root_word(word):
     #remove tashkeel
     cleaned_word = dediac_ar(word)
 
-    #noemalize
+    #normalize
     cleaned_word = normalize_text(cleaned_word)
     cleaned_word = dediac_ar(cleaned_word)
 

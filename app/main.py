@@ -46,17 +46,17 @@ else:
 #### 1- First API (Add new business data with scrape reviews from ggogle busines , extract aspect and opinions) Started
 task_status = {}
 
-#create busines accoint in db
-def create_new_business():
 
+def create_new_business(name, logo):
     business_data = {
+        "name": "New loading..",
+        "logo": "https://i.ibb.co/ZxCr1Sk/Union.jpg",
         "progress_status": "scrapping_reviews"
     }
     
     obj_business_id = business_collection.insert_one(business_data).inserted_id
     business_id = str(obj_business_id)
 
-    
     return business_id
 
 # do task at background
