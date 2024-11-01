@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from pydantic import BaseModel
 from .database import get_database
 from .insights import getOveralSentiment, group_aspects_and_calculate_sentiments, get_top_aspects_and_opinions, get_aspect_counts_by_month
-# from .pipelines.insights_extractions import generate_insights_text
+from .pipelines.insights_extractions import generate_insights_text
 from .pipelines.generate_reply import generate_reply, get_instance, correct_reply
 from .processing_text import wrap_words_with_span
 from .pipelines.extract_aspects import extract_save_aspects, handele_reviews_asepct_tags
@@ -112,8 +112,14 @@ async def add_new_business(background_tasks: BackgroundTasks, request: BusinessR
 
 # Helper function to serialize ObjectId to string and show only specific fields
 def serialize_business_data(business):
+    
+    progress_status, progress_message, progress_percentage = business_loading_status( str(business["_id"]))
+
     return {
         "id": str(business["_id"]),  # Convert ObjectId to string
+        "progress_status": progress_status,
+        "progress_message": progress_message,
+        "progress_percentage": progress_percentage,
         "category": business.get("category"),
         "name": business.get("name"),
         "logo": business.get("logo"),
@@ -353,19 +359,19 @@ async def generate_insights(business_id: str):
     # Fetch the insights document if it is already exists
     insights = insights_collection.find_one({"business_id": business_id})
 
-    # if insights is None:
-    #     print("No insights found for the given business ID.")
-    #     try:
-    #         # Generate and insert insights data if none exist
-    #         generate_insights_text(business_id)
-    #         # Re-fetch the inserted insights document to get the _id
-    #         insights = insights_collection.find_one({"business_id": business_id})
+    if insights is None:
+        print("No insights found for the given business ID.")
+        try:
+            # Generate and insert insights data if none exist
+            generate_insights_text(business_id)
+            # Re-fetch the inserted insights document to get the _id
+            insights = insights_collection.find_one({"business_id": business_id})
 
-    #         if insights is None:
-    #             return {"status": "error", "message": "Failed to insert or retrieve new insights."}
+            if insights is None:
+                return {"status": "error", "message": "Failed to insert or retrieve new insights."}
 
-    #     except Exception as e:
-    #         return {"status": "error", "message": str(e)}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
 
     # Format the response with headings
