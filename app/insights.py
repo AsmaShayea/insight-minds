@@ -235,17 +235,17 @@ def get_aspect_counts_by_month(business_id):
         1: 'يناير', 2: 'فبراير', 3: 'مارس', 4: 'أبريل', 5: 'مايو', 6: 'يونيو',
         7: 'يوليو', 8: 'أغسطس', 9: 'سبتمبر', 10: 'أكتوبر', 11: 'نوفمبر', 12: 'ديسمبر'
     }
-    grouped['month'] = grouped['month'].map(month_order)
+    grouped['month_name'] = grouped['month'].map(month_order)
 
-    # Sort by year and month order
-    grouped = grouped.sort_values(by=['year', 'month'], key=lambda x: x.map({v: k for k, v in month_order.items()}))
+    # Sort by year and month using month as numeric order
+    grouped = grouped.sort_values(by=['year', 'month'])
 
     # Prepare the JSON response
     result = []
     for _, row in grouped.iterrows():
         result.append({
             "year": int(row['year']),
-            "month": row['month'],
+            "month": row['month_name'],  # Use the Arabic month name
             "positive_count": int(row.get('positive', 0)),  # Get positive count or default to 0
             "negative_count": int(row.get('negative', 0))   # Get negative count or default to 0
         })
