@@ -230,10 +230,19 @@ def save_aspects_data(reviews, business_id):
                     print("old",aspect["aspect"])
                     print("new",aspect_value)
 
+                    polarity = aspect["polarity"]
+
+                    if polarity in ["إيجابي", "ايجابي"]:
+                        polarity = "positive"
+                    elif polarity == "سلبي":
+                        polarity = "negative"
+                    elif aspect["polarity"] == "محايد":
+                        polarity = "neutral"
+
                     root_aspect = get_root_word(aspect_value)
                     existing_aspects = aspects_collection.find_one({
                         "root_aspect": root_aspect,
-                        "polarity": aspect["polarity"],
+                        "polarity": polarity,
                         "review_id": review_id,
                     })
                     if not existing_aspects:
@@ -242,7 +251,7 @@ def save_aspects_data(reviews, business_id):
                             "business_id": review['business_id'],
                             "aspect": clean_result(aspect_value),
                             "root_aspect": root_aspect,
-                            "polarity": aspect["polarity"],
+                            "polarity": polarity,
                             "polarity_score": aspect["polarity_score"],
                             # "category": aspect["category"],
                             "opinions": clean_result(aspect["opinions"]),
@@ -314,17 +323,17 @@ def handele_reviews_asepct_tags(reviews):
 
             # Replace the aspect in the review text
             review_aspects_text = review_aspects_text.replace(aspect_str, highlighted_aspect)
-            tokenized_review = wrap_words_with_span(review_text)
+        tokenized_review = wrap_words_with_span(review_text)
 
-            reviews_collection.update_one(
-            {"review_id": review['review_id']},
-            {
-                "$set": {
-                    "review_aspects_text": review_aspects_text,
-                    "tokenized_review": tokenized_review
-                }
+        reviews_collection.update_one(
+        {"review_id": review['review_id']},
+        {
+            "$set": {
+                "review_aspects_text": review_aspects_text,
+                "tokenized_review": tokenized_review
             }
-            )
+        }
+        )
 
 
 def extract_save_aspects(business_id, google_id):

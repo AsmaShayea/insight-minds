@@ -62,7 +62,6 @@ def scrape_reviews(business_id, google_id):
             "type": place['type'],
             "subtypes": place['subtypes'],
             "rating": place['rating'],
-            "progress_status": "scrapping_reviews",
         }
         # Update the document with a matching place_id
         business_collection.update_one(
@@ -81,15 +80,16 @@ def scrape_reviews(business_id, google_id):
         
                 if not existing_review:
                     review_data = {
-                        "review_id": review['review_id'],
-                        "business_id": str(business_id),
-                        "review_text": review['review_text'],
-                        "owner_answer": review['owner_answer'],
-                        "review_rating": review['review_rating'],
-                        "review_timestamp": review['review_timestamp'],
-                        "review_datetime_utc": review['review_datetime_utc'],
-                        "review_likes": review['review_likes'],
-                        "is_analyzed": "false",
+                    "review_id": review['review_id'],
+                    "business_id": str(business_id),
+                    "author_name": review['author_title'],
+                    "author_logo": review['author_image'],
+                    "review_text": review['review_text'],
+                    "owner_answer": review['owner_answer'],
+                    "review_rating": review['review_rating'],
+                    "review_timestamp": review['review_timestamp'],
+                    "review_datetime_utc": review['review_datetime_utc'],
+                    "review_likes": review['review_likes'],
                     }
                     
                     review_id = reviews_collection.insert_one(review_data).inserted_id

@@ -29,6 +29,8 @@ def clean_result(input_value):
     def remove_undesired(text):
         cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
         cleaned_text = re.sub(r"NOT_", "", text)  # Remove "Place_"
+        cleaned_text = re.sub(r"Place", "", text)  # Remove "Place_"
+        cleaned_text = re.sub(r"NOT", "", text)  # Remove "Place_"
         cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
         cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)
         return cleaned_text.strip()

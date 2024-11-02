@@ -47,7 +47,7 @@ else:
 task_status = {}
 
 
-def create_new_business(name, logo):
+def create_new_business():
     business_data = {
         "name": "New loading..",
         "logo": "https://i.ibb.co/ZxCr1Sk/Union.jpg",

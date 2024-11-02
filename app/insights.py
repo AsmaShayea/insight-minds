@@ -97,6 +97,8 @@ def group_aspects_and_calculate_sentiments(business_id):
     
     # Group aspects and count occurrences
     for aspect in aspects_data:
+        print("aspect_id",aspect['_id'])
+
         root_aspect = aspect['root_aspect']
         polarity = aspect['polarity']
         
