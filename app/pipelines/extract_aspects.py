@@ -31,13 +31,19 @@ You are an advanced AI model specialized in extracting aspects and determining s
 Follow these steps for the task:
 1- Preprocess the text by normalizing, removing stopwords, and lemmatizing the words.
 2- Extract all aspects (nouns) mentioned in the review. No aspect with same polarity will be repeatead in two items.
-3- Assign a sentiment polarity for each aspect as one of the following: positive, negative, or neutral with adding the polarity score.
-4- For mixed polarity (both positive and negative sentiments), split the aspect into two entries with the same name but different sentiments.
-5- If there is a duplicated aspect, **merge the data** by combining their descriptions and averaging the polarity score while avoiding any repeated information.
-6- For each aspect, extract unique opinion terms which are the relevant adjectives with their corresponding nouns to form a description or their opinion for the aspect. Do not duplicate any opinion term.
+3- Assign a sentiment polarity for each aspect as one of the following: positive, negative, or neutral with adding the 
+polarity score.
+4- For mixed polarity (both positive and negative sentiments), split the aspect into two entries with the same name but
+ different sentiments.
+5- If there is a duplicated aspect, **merge the data** by combining their descriptions and averaging the polarity score
+ while avoiding any repeated information.
+6- For each aspect, extract unique opinion terms which are the relevant adjectives with their corresponding nouns to form
+ a description or their opinion for the aspect. Do not duplicate any opinion term.
 7- Provide the output in the exact format shown in the examples below, without any explanations, translation, or additional.
-8- Check that output is in JSON format, and it is an array of objects. The array must start with "[" and end with "]", and each object must start with "{" and end with "}", separated by commas ",".
-9- Do not show me the traslation or how/what you are doing just show me the output and it's just one output do not repeat or duplicate.
+8- Check that output is in JSON format, and it is an array of objects. The array must start with "[" and end with "]", 
+and each object must start with "{" and end with "}", separated by commas ",".
+9- Do not show me the traslation or how/what you are doing just show me the output and it's just one output 
+do not repeat or duplicate.
 10- Review your result before show it.
 11- once you retrievied "Outpu:" started with "[" and closed with "]", stop here and do not generating more.
 
@@ -102,7 +108,10 @@ Example1_end
 
 
 Example 2:
-Input: "هاذي أول زيارة لي لـ الكوفي ، أخذت قهوة اليوم - أثيوبي (ساخن) ، القهوه رايقه وفيها شويه مراره ، بس مراره القهوه المطلوب ، القهوه أعطيها 10/9 ، وطلبت حلى نمق ، تجي كيكه ومعها ايسكريم الكيكه عادية مافيها شيء زود ، وتقييمي لها 10/6 ، الكوفي شرح وفيه جلسات فوق للعوائل وجلسات داخل حلوه وعددها كويس ، الملاحظة بسيطه ، الكيكة تقديمها في علبه كرتونيه وتحتها ورق ماكانت فكره حلوه الورق يتفتت مع الايسكريم ويدخل مع الكيكه وتبلش فيه ، وبالنسبه للموظفين جداً بشوشين."
+Input: "هاذي أول زيارة لي لـ الكوفي ، أخذت قهوة اليوم - أثيوبي (ساخن) ، القهوه رايقه وفيها شويه مراره ، بس مراره القهوه المطلوب 
+، القهوه أعطيها 10/9 ، وطلبت حلى نمق ، تجي كيكه ومعها ايسكريم الكيكه عادية مافيها شيء زود ، وتقييمي لها 10/6 ، الكوفي 
+شرح وفيه جلسات فوق للعوائل وجلسات داخل حلوه وعددها كويس ، الملاحظة بسيطه ، الكيكة تقديمها في علبه كرتونيه وتحتها 
+ورق ماكانت فكره حلوه الورق يتفتت مع الايسكريم ويدخل مع الكيكه وتبلش فيه ، وبالنسبه للموظفين جداً بشوشين."
 Output: 
 [
     {

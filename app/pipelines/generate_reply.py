@@ -39,8 +39,13 @@ def generate_reply(review_id):
 
     try:
         # For RAG data, we included reviews that had received responses from the owner, combining them in the dataset 
-        # to better simulate the owner's style and wording when generating a reply.        
-        retriever = VectorStoreCache.get_retriever("generate_reply")
+        # to better simulate the owner's style and wording when generating a reply.  
+        replies_data = process_owner_reply()   
+        documents = [
+                    f"Review: {review['review_text']} Reply: {review['owner_answer']}" 
+                    for review in replies_data
+                ]   
+        retriever = VectorStoreCache.get_retriever(documents)
     except Exception as e:
         print("Error while retrieving VectorStoreCache:", e)
         return "Error retrieving the VectorStoreCache."
@@ -54,7 +59,7 @@ def generate_reply(review_id):
         - The response must be related to the review.
         - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to calrify.
         - Reply in the same language as the review, and do not include any text in a different language.
-        - Avoid repeating client phrases or adding filler content.
+        - Avoid repeating client phrases or adding filler content and you do not have to mention all aspects he talked about just brief.
         - Do not add any hashtag or mention
         - Follow the output of the example below.
 
@@ -79,6 +84,12 @@ def generate_reply(review_id):
 
     return cleaned_text
 
+
+def process_owner_reply():
+        """Fetches review data from the MongoDB collection."""
+        reviews_collection = get_database()['reviews']
+        return list(reviews_collection.find({"owner_answer": {"$exists": True, "$ne": "", "$type": "string"}}, {"_id": 0}))
+    
 
 # def correct_reply(reply_text):
 #     reply_text = reply_text.strip()  # Clean up any extraneous whitespace or newlines
