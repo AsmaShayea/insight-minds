@@ -40,12 +40,8 @@ def generate_reply(review_id):
     try:
         # For RAG data, we included reviews that had received responses from the owner, combining them in the dataset 
         # to better simulate the owner's style and wording when generating a reply.  
-        replies_data = process_owner_reply()   
-        documents = [
-                    f"Review: {review['review_text']} Reply: {review['owner_answer']}" 
-                    for review in replies_data
-                ]   
-        retriever = VectorStoreCache.get_retriever(documents)
+
+        retriever = VectorStoreCache.get_retriever(review['business_id'],"generate_reply")
     except Exception as e:
         print("Error while retrieving VectorStoreCache:", e)
         return "Error retrieving the VectorStoreCache."
@@ -58,8 +54,9 @@ def generate_reply(review_id):
         - The reply should follow the same style, words, pahses and the length that the owner always uses.
         - The response must be related to the review.
         - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to calrify.
-        - Reply in the same language as the review, and do not include any text in a different language.
-        - Avoid repeating client phrases or adding filler content and you do not have to mention all aspects he talked about just brief.
+        - Reply in the same language as the review, and do not include or translate any other language.
+        - Avoid repeating client phrases or adding filler content.
+        - Do not mention the aspects writtten in the review or what they like unless it is an issue need to be handles, just brief in overall.
         - Do not add any hashtag or mention
         - Follow the output of the example below.
 
@@ -82,13 +79,16 @@ def generate_reply(review_id):
     # Substitute the pattern with an empty string
     cleaned_text = re.sub(pattern, "", response).strip()
 
+    # Remove everything after "Note:"
+    cleaned_text = re.split(r'\n\s*Note:', cleaned_text)[0].strip()
+
     return cleaned_text, review['review_text']
 
 
-def process_owner_reply():
-        """Fetches review data from the MongoDB collection."""
-        reviews_collection = get_database()['reviews']
-        return list(reviews_collection.find({"owner_answer": {"$exists": True, "$ne": "", "$type": "string"}}, {"_id": 0}))
+# def process_owner_reply():
+#         """Fetches review data from the MongoDB collection."""
+#         reviews_collection = get_database()['reviews']
+#         return list(reviews_collection.find({"owner_answer": {"$exists": True, "$ne": "", "$type": "string"}}, {"_id": 0}))
     
 
 # def correct_reply(reply_text):

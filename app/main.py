@@ -186,7 +186,7 @@ def business_loading_status(business_id: str):
 
         else:
             # Check if the task is completed
-            total_reviews = reviews_collection.count_documents({"business_id": business_id}) + 1
+            total_reviews = reviews_collection.count_documents({"business_id": business_id})
             analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
         
 
