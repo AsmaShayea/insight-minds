@@ -53,9 +53,9 @@ def generate_reply(review_id):
     prompt_template = f"""
         Generate a reply from the business owner to the customer review following these steps:
 
-        - Make it as short as possible and directly related to the review, without unnecessary details.
+        - Make it as short as possible and directly related to the review, without unnecessary details .
         - Consider that this business is a {business['category']}.
-        - The reply should follow the same style, words and pahses that the owner always uses.
+        - The reply should follow the same style, words, pahses and the length that the owner always uses.
         - The response must be related to the review.
         - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to calrify.
         - Reply in the same language as the review, and do not include any text in a different language.
@@ -82,7 +82,7 @@ def generate_reply(review_id):
     # Substitute the pattern with an empty string
     cleaned_text = re.sub(pattern, "", response).strip()
 
-    return cleaned_text
+    return cleaned_text, review['review_text']
 
 
 def process_owner_reply():

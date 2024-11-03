@@ -327,9 +327,12 @@ def get_reviews(business_id: str):
 @app.get("/get-reply/{review_id}")
 async def get_reply(review_id: str):
     try:
-        reply = generate_reply(review_id)
+        reply, review = generate_reply(review_id)
         if reply:
-            return {"reply": reply}
+            return {
+                "review": review,
+                "reply": reply
+                }
         else:
             raise HTTPException(status_code=404, detail="Review not found.")
     except Exception as e:
