@@ -27,12 +27,12 @@ stop_words = stopwords.words()
 def clean_result(input_value):
     # Function to remove undesired substrings
     def remove_undesired(text):
+        print("cleaned_text1",text)
         cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
-        cleaned_text = re.sub(r"NOT_", "", text)  # Remove "Place_"
-        cleaned_text = re.sub(r"Place", "", text)  # Remove "Place_"
-        cleaned_text = re.sub(r"NOT", "", text)  # Remove "Place_"
+        cleaned_text = re.sub(r"NOT_", "", cleaned_text)  # Remove "Place_"
         cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
         cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)
+        print("cleaned_text2",cleaned_text)
         return cleaned_text.strip()
     
     # Check if the input is a list (array)
@@ -190,7 +190,6 @@ def preprocess_arabic_text(text):
         if lemmitized_token in important_stopwords:
             token = f'Place_{token}'
 
-
     
         # Add the processed token to the final list and mapp
 
@@ -211,9 +210,9 @@ def preprocess_arabic_text(text):
         if lemmitized_token in stop_words:
             continue
 
-        # Step 7: Specific Word Handling
-        if lemmitized_token in important_stopwords:
-            token = f'Place_{token}'
+        # # Step 7: Specific Word Handling
+        # if lemmitized_token in important_stopwords:
+        #     token = f'Place_{token}'
 
 
     
@@ -223,6 +222,8 @@ def preprocess_arabic_text(text):
 
     # Join the processed tokens into a single string
     preprocessed_text = ' '.join(processed_tokens)
+
+    print("reviewed_text", preprocessed_text)
 
     return preprocessed_text, token_mapping
 
@@ -275,39 +276,39 @@ def tokenize_text(text):
     tokens = simple_word_tokenize(text)
     return tokens
 
-def get_original_token(text, mapping):
-    # Tokenize the input text
-    tokenized_text = tokenize_text(text)
+# def get_original_token(text, mapping):
+#     # Tokenize the input text
+#     tokenized_text = tokenize_text(text)
     
-    # Initialize the replaced_text variable with the original text
-    replaced_text = text
+#     # Initialize the replaced_text variable with the original text
+#     replaced_text = text
     
-    if len(tokenized_text) > 1:
-        replaced_words = []
-        indices = []
+#     if len(tokenized_text) > 1:
+#         replaced_words = []
+#         indices = []
         
-        for word in tokenized_text:
-            # Find the corresponding value for the word in mapping
-            found = next(((k, v) for (k, v) in mapping if word == k), None)
-            if found is not None:
-                replaced_words.append(found[1])  # Append the value (v) to the replaced words
-                indices.append(mapping.index(found))  # Get the index in mapping
+#         for word in tokenized_text:
+#             # Find the corresponding value for the word in mapping
+#             found = next(((k, v) for (k, v) in mapping if word == k), None)
+#             if found is not None:
+#                 replaced_words.append(found[1])  # Append the value (v) to the replaced words
+#                 indices.append(mapping.index(found))  # Get the index in mapping
     
-        # Check if indices are in the same order and consecutive
-        if all(indices[i] < indices[i + 1] for i in range(len(indices) - 1)):
-            print("All words found in the same order in mapping.")
-            # Join the replaced words into a single string
-            replaced_text = ' '.join(replaced_words)
-        else:
-            print("Words are not in the same order in mapping.")
-    else:
-        # Handle case for single word
-        for k, v in mapping:
-            if tokenized_text[0] == k:
-                replaced_text = v  # Replace the single word with its mapped value
-                break
+#         # Check if indices are in the same order and consecutive
+#         if all(indices[i] < indices[i + 1] for i in range(len(indices) - 1)):
+#             print("All words found in the same order in mapping.")
+#             # Join the replaced words into a single string
+#             replaced_text = ' '.join(replaced_words)
+#         else:
+#             print("Words are not in the same order in mapping.")
+#     else:
+#         # Handle case for single word
+#         for k, v in mapping:
+#             if tokenized_text[0] == k:
+#                 replaced_text = v  # Replace the single word with its mapped value
+#                 break
 
-    return replaced_text
+#     return replaced_text
 
 
 

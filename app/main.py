@@ -90,6 +90,8 @@ def start_task(background_tasks: BackgroundTasks, google_id: Optional[str] = Non
     else:
         business_id = create_new_business()
 
+    print("business_id",business_id)
+
     background_tasks.add_task(background_task, business_id, google_id)
     return {"status": "started", "business_id":business_id,"message": f"Business {google_id} started scraping {url}"}
 

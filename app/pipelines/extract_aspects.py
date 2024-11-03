@@ -209,7 +209,7 @@ def save_aspects_data(reviews, business_id):
         review_txt = review['review_text']
         review_id = review['review_id']
         existing_aspect_review = aspects_collection.find_one({"review_id": review_id})
-        is_review_analyzed = "false"
+        # is_review_analyzed = "false"
         print("1234")
         if not existing_aspect_review:
             print(review_id)
@@ -281,15 +281,23 @@ def save_aspects_data(reviews, business_id):
         else:
             print('done')
 
-        if is_review_analyzed == "false":
-    
-            reviews_collection.update_one(
-                {"review_id": review_id},  # Match the review by review_id
-                {"$set": {"is_analyzed": "true"}}  # Set is_analyzed to True
-            )
-            is_review_analyzed = "true"
+        
+        review_aspects_text = handele_reviews_asepct_tags(review)
+        tokenized_review = wrap_words_with_span(review_txt)
+        print("prev_set not done")
+        reviews_collection.update_one(
+        {"review_id": review_id},
+        {
+            "$set": {
+                "review_aspects_text": review_aspects_text,
+                "tokenized_review": tokenized_review,
+                "is_analyzed": "true"
+            }
+        }
+        )
+        print("prev_set done")
 
-    generate_insights_text(business_id)
+    #generate_insights_text(business_id)
 
     business_collection.update_one(
         {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
@@ -299,41 +307,29 @@ def save_aspects_data(reviews, business_id):
     print("done")
 
 
-def handele_reviews_asepct_tags(reviews):
+def handele_reviews_asepct_tags(review):
 
-    for review in reviews:
-       # Get aspects for the review
-        aspects = list(aspects_collection.find({"review_id": review['review_id']}))
-        review_text = review['review_text']
-        review_aspects_text = review['review_text']
-        aspect_details = []
-        
-        for aspect in aspects:
-            aspect_str = aspect['aspect']
-            # polarity_score = aspect['polarity_score']
-            polarity = aspect['polarity']
+    aspects = list(aspects_collection.find({"review_id": review['review_id']}))
+    review_aspects_text = review['review_text']
+    
+    for aspect in aspects:
+        aspect_str = aspect['aspect']
+        # polarity_score = aspect['polarity_score']
+        polarity = aspect['polarity']
 
-            # Color-code the aspects
-            if polarity == 'positive':
-                highlighted_aspect = f"<span style='color: #3fda68;'>{aspect_str}</span>"
-            elif polarity == 'negative':
-                highlighted_aspect = f"<span style='color: #f8265b;'>{aspect_str}</span>"
-            else:
-                highlighted_aspect = aspect_str
+        # Color-code the aspects
+        if polarity == 'positive':
+            highlighted_aspect = f"<span style='color: #3fda68;'>{aspect_str}</span>"
+        elif polarity == 'negative':
+            highlighted_aspect = f"<span style='color: #f8265b;'>{aspect_str}</span>"
+        else:
+            highlighted_aspect = aspect_str
 
-            # Replace the aspect in the review text
-            review_aspects_text = review_aspects_text.replace(aspect_str, highlighted_aspect)
-        tokenized_review = wrap_words_with_span(review_text)
+        # Replace the aspect in the review text
+        review_aspects_text = review_aspects_text.replace(aspect_str, highlighted_aspect)
 
-        reviews_collection.update_one(
-        {"review_id": review['review_id']},
-        {
-            "$set": {
-                "review_aspects_text": review_aspects_text,
-                "tokenized_review": tokenized_review
-            }
-        }
-        )
+    return review_aspects_text
+
 
 
 def extract_save_aspects(business_id, google_id):
@@ -348,8 +344,7 @@ def extract_save_aspects(business_id, google_id):
     save_aspects_data(reviews, business_id)
 
     print("hi4 dddddd")
-    ## color aspects inside review text in red or green based on its
-    handele_reviews_asepct_tags(reviews)
+
 
 
 # def extract_save_aspects(business_id, url):
