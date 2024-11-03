@@ -4,7 +4,7 @@ from outscraper import ApiClient
 from bson.objectid import ObjectId
 import re
 
-#scrapping data from google business
+#scrapping data with outscraper
 api_client = ApiClient(api_key='YWNhNDdkZWJmNzg0NDdiM2EzZDFkZDMxNmZlNDFkMDV8NDBjZGIwMGU4MA')
 
 # Initialize collections
@@ -15,6 +15,7 @@ insights_collection = get_database()['insights']
 errors_log_collection = get_database()['errors_log']
 
 
+#get just the arabic reviews
 def is_arabic(text):
     # Count Arabic characters
     arabic_count = len(re.findall(r'[\u0600-\u06FF]', text))
@@ -30,12 +31,9 @@ def is_arabic(text):
 
 
 
-
-
-
 def scrape_reviews(business_id, google_id):
 
-    # Scraping Google reviews using the business name and location
+    # Scraping Google reviews using the google id
     results = api_client.google_maps_reviews(google_id, 
         reviews_limit=10, 
         ignore_empty=True,
@@ -45,7 +43,6 @@ def scrape_reviews(business_id, google_id):
 
     # Save business and reviews data into DB
     for place in results:
-        # Check if the place already exists in the database by place_id
         reviews = place['reviews_data']
         # If the place doesn't exist, insert it into the database
         business_data = {
@@ -65,8 +62,8 @@ def scrape_reviews(business_id, google_id):
         }
         # Update the document with a matching place_id
         business_collection.update_one(
-            {"_id": ObjectId(business_id)},  # Filter to match the document
-            {"$set": business_data},  # Update the document with new data
+            {"_id": ObjectId(business_id)},  
+            {"$set": business_data}, 
             upsert=True  # If the document doesn't exist, insert it
         )
         print(f"Added business with business_id {business_id} to the database.")
@@ -74,6 +71,7 @@ def scrape_reviews(business_id, google_id):
         
         for review in reviews:
 
+            #get just the arabic reviews
             if is_arabic(review['review_text']):
                 # Check if the place already exists in the database by place_id
                 existing_review = reviews_collection.find_one({"review_id": review['review_id']})
@@ -98,8 +96,8 @@ def scrape_reviews(business_id, google_id):
                     print(f"Review with review_id {review['review_id']} already exists in the database.")
 
         business_collection.update_one(
-            {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
-            {"$set": {"progress_status": "reviews_scrapped_successfully"}}  # Set the new progress status
+            {"_id": ObjectId(business_id)}, 
+            {"$set": {"progress_status": "reviews_scrapped_successfully"}}  # update status progress
         )
     
         print(f"Reviews and business Added")

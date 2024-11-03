@@ -43,7 +43,7 @@ def calculate_sentiment_percentage(positive_count, negative_count, total_count):
     return positive_percentage, negative_percentage
 
 
-#1- Calculate overall sentiment polarity
+#1- Calculate overall sentiment polarity for a business
 def getOveralSentiment(business_id):
     # Initialize counters
     positive_count = 0
@@ -54,10 +54,9 @@ def getOveralSentiment(business_id):
     "polarity": { 
         "$nin": ["mixed", "neutral"]
     },
-    "business_id": business_id  # Add this filter to match the specific business_id
+    "business_id": business_id  
     })
 
-    # Iterate over each document in the aspects collection
     for aspect in aspects_data:
         polarity = aspect['polarity']
         
@@ -82,7 +81,7 @@ def getOveralSentiment(business_id):
     return overal_sentiment
 
 
-
+## get most common aspect for postitive and negative
 def group_aspects_and_calculate_sentiments(business_id):
     # Step 1: Group by root_aspect and count occurrences
     aspects_data = aspects_collection.find({
@@ -125,7 +124,6 @@ def group_aspects_and_calculate_sentiments(business_id):
             positive_count, negative_count, total_count
         )
         
-        # Store the results for each aspect
         results.append({
             'aspect': aspect,
             "total": {"count": total_count, "percentage": "100"},
@@ -136,14 +134,14 @@ def group_aspects_and_calculate_sentiments(business_id):
     return results
 
 
-
+#get opinions for top 3 positive and negative
 def get_top_aspects_and_opinions(business_id):
     # Step 1: Group aspects by polarity, and collect counts and opinions
     aspects_data = aspects_collection.find({
         "polarity": { 
             "$nin": ["mixed", "neutral"]
         },
-        "business_id": business_id  # Add this filter to match the specific business_id
+        "business_id": business_id  
         })
 
     positive_aspects = defaultdict(int)
@@ -194,22 +192,21 @@ def get_top_aspects_and_opinions(business_id):
         for aspect, count in top_negative_aspects
     ]
 
-    # Step 4: Return both positive and negative results
     return {
         'top_positive_aspects': positive_results,
         'top_negative_aspects': negative_results
     }
 
 
+# Changes in the count of negative , positive aspects
 def get_aspect_counts_by_month(business_id):
-    # Fetch all reviews and aspects
     reviews_data = list(reviews_collection.find({
-        "business_id": business_id  # Filter by business_id
+        "business_id": business_id  
     }))
 
     aspects_data = list(aspects_collection.find({
-        "polarity": {"$nin": ["mixed", "neutral"]},  # Filter by polarity
-        "business_id": business_id                    # Filter by business_id
+        "polarity": {"$nin": ["mixed", "neutral"]},  
+        "business_id": business_id                    
     }))
 
     # Convert the data to Pandas DataFrames

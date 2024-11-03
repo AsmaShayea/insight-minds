@@ -18,34 +18,16 @@ db = MorphologyDB.builtin_db()
 analyzer = Analyzer(db)
 stop_words = set(stopwords.words())  # Faster look-up with set
 negation_words = {'لا', 'لم', 'ما', 'لن'}
-important_stopwords = {'المكان', 'مكان'}
+important_stopwords = {'المكان', 'مكان'} # from error we received this word alwas case an issue for results, we handle it by add Place_ with this word
 
 # Example Arabic stopwords
 stop_words = stopwords.words()
 
 
-def clean_result(input_value):
-    # Function to remove undesired substrings
-    def remove_undesired(text):
-        print("cleaned_text1",text)
-        cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
-        cleaned_text = re.sub(r"NOT_", "", cleaned_text)  # Remove "Place_"
-        cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
-        cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)
-        print("cleaned_text2",cleaned_text)
-        return cleaned_text.strip()
-    
-    # Check if the input is a list (array)
-    if isinstance(input_value, list):
-        # Apply the cleaning function to each element in the list
-        return [remove_undesired(item) for item in input_value if isinstance(item, str)]
-    
-    # If the input is a single string, clean it directly
-    elif isinstance(input_value, str):
-        return remove_undesired(input_value)
-    
-    # Return None or input as-is if it's neither string nor list
-    return input_value
+# Step 2: Tokenization
+def tokenize_text(text):
+    tokens = simple_word_tokenize(text)
+    return tokens
 
 # Step 1: Normalization
 def normalize_text(text):
@@ -59,55 +41,12 @@ def normalize_text(text):
     text = normalize_teh_marbuta_ar(text)
     return text
 
-# Step 5: Lemmatization using Analyzer
-def get_root_word(word):
-    
-    #remove tashkeel
-    cleaned_word = dediac_ar(word)
-
-    #normalize
-    cleaned_word = normalize_text(cleaned_word)
-    cleaned_word = dediac_ar(cleaned_word)
-
-    #lemmatized
-    analyses = analyzer.analyze(word)
-    if analyses:
-        cleaned_word = analyses[0]['lex']
-    
-    else:
-        # Handle the case where no analysis was found
-        cleaned_word = cleaned_word  # Or any fallback mechanism you prefer
-
-
-    cleaned_word = normalize_text(cleaned_word)
-    cleaned_word = dediac_ar(cleaned_word)
-    
-
-    return cleaned_word
-
-
-def extract_aspect_data(generated_text):
-
-    aspect_data_list = []
-
-    # Regular expression to match each aspect object, focusing on "phrases"
-    pattern = r'\{\s*"aspect":\s*[^{}]*"opinions":\s*\[[^\]]*\]\s*\}'
-    
-    # Find all matches
-    aspects_data = re.findall(pattern, generated_text, re.DOTALL)
-
-    for aspect_data in aspects_data:
-        aspect_data = aspect_data.strip()
-
-        aspect_data_to_save = json.loads(aspect_data)
-        aspect_data_list.append(aspect_data_to_save)
-    return aspect_data_list
 
 
 def clean_text(tokens):
     cleaned_tokens = []
     for token in tokens:
-        # Preserve "لام الشمسية" and proper names like "الله"
+        # Remove elongation with Preserve "لام الشمسية" and proper names like "الله"
         if not re.match(r'^(الل|اللّ|لل|ال[^\u0627-\u063a])', token):
             # Remove elongation (e.g., جمييييل => جميل), but do not shorten valid names
              token = re.sub(r'(.)\1{2,}', r'\1', token)
@@ -129,7 +68,7 @@ def preprocess_arabic_text(text):
 
     
     # Tokenization
-    tokens = simple_word_tokenize(text)
+    tokens = tokenize_text(text)
 
     text = clean_text(text)
     
@@ -143,20 +82,13 @@ def preprocess_arabic_text(text):
         original_token = token  # Preserve original token for mapping
 
         # Step 1: Normalization
-        # Normalize alef variants to 'ا'
-        token = normalize_alef_ar(token)
-        # Normalize alef maksura 'ى' to yeh 'ي'
-        token = normalize_alef_maksura_ar(token)   
-        # Normalize teh marbuta 'ة' to heh 'ه'
-        token = normalize_teh_marbuta_ar(token)
-        # Normalize teh marbuta 'ة' to heh 'ه'
-        token = normalize_teh_marbuta_ar(token)
+        token = normalize_text(token)
         
         # Step 2: Remove diacritics (Tashkeel)
         token = dediac_ar(token)
     
 
-        # Step 4: Lemmatization
+        # Step 3: Lemmatization
         lemmas = {analysis['lex'] for analysis in analyzer.analyze(token)}
         if lemmas:
             lemmitized_token = dediac_ar(list(lemmas)[0])  # Take the first lemma if available
@@ -164,10 +96,10 @@ def preprocess_arabic_text(text):
             lemmitized_token = token
     
 
-        # Step 4: Lemmatization
-        lemmas = {analysis['lex'] for analysis in analyzer.analyze(token)}
-        if lemmas:
-            lemmitized_token = dediac_ar(list(lemmas)[0])  # Take the first lemma if available
+        # # Step 4: Lemmatization
+        # lemmas = {analysis['lex'] for analysis in analyzer.analyze(token)}
+        # if lemmas:
+        #     lemmitized_token = dediac_ar(list(lemmas)[0])  # Take the first lemma if available
 
 
         # Step 4: Negation Handling
@@ -186,7 +118,7 @@ def preprocess_arabic_text(text):
         if lemmitized_token in stop_words:
             continue
 
-        # Step 7: Specific Word Handling
+        # Step 6: Specific Word Handling
         if lemmitized_token in important_stopwords:
             token = f'Place_{token}'
 
@@ -194,21 +126,21 @@ def preprocess_arabic_text(text):
         # Add the processed token to the final list and mapp
 
 
-        # Step 4: Negation Handling
-        if lemmitized_token in negation_words:
-            negation_word = token
-            negation_active = True
-            continue  # Skip adding the negation word itself
+        # # Step 4: Negation Handling
+        # if lemmitized_token in negation_words:
+        #     negation_word = token
+        #     negation_active = True
+        #     continue  # Skip adding the negation word itself
 
-        if negation_active:
-            original_token = negation_word + token
-            token = f'NOT_{token}'
-            negation_active = False  # Reset negation status
+        # if negation_active:
+        #     original_token = negation_word + token
+        #     token = f'NOT_{token}'
+        #     negation_active = False  # Reset negation status
 
 
-        # Step 5: Stopword Removal (skip if a stopword)
-        if lemmitized_token in stop_words:
-            continue
+        # # Step 5: Stopword Removal (skip if a stopword)
+        # if lemmitized_token in stop_words:
+        #     continue
 
         # # Step 7: Specific Word Handling
         # if lemmitized_token in important_stopwords:
@@ -223,13 +155,16 @@ def preprocess_arabic_text(text):
     # Join the processed tokens into a single string
     preprocessed_text = ' '.join(processed_tokens)
 
-    print("reviewed_text", preprocessed_text)
+    print("preprocessed review", preprocessed_text)
 
     return preprocessed_text, token_mapping
 
+
+
+##from mapping, get the original word of a specific aspect
 def get_original_token(processed_token, token_mapping):
     # Tokenize the processed token
-    tokens = simple_word_tokenize(processed_token)
+    tokens = tokenize_text(processed_token)
     original_tokens = []
 
     # Search for each token in the token mapping
@@ -241,7 +176,7 @@ def get_original_token(processed_token, token_mapping):
                 found = True
                 break
         if not found:
-            original_tokens.append(token)  # Keep the token as is if not found in mapping
+            original_tokens.append(token)  # Keep the token as it is if not found in mapping
 
     # Join the original tokens back into a single string
     return ' '.join(original_tokens)
@@ -251,9 +186,9 @@ def get_original_token(processed_token, token_mapping):
 
 
 
-#post processing
+#post processing , Hndle text after receiving results from prompt
 
-
+##splits word in review and put them in span tag
 def wrap_words_with_span(text):
     # Regular expression to match words of 2 or more characters
     words = re.findall(r'\S+', text)  # \S+ matches any sequence of non-whitespace characters
@@ -271,10 +206,7 @@ def wrap_words_with_span(text):
 
     return wrapped_text.strip()
 
-# Step 2: Tokenization
-def tokenize_text(text):
-    tokens = simple_word_tokenize(text)
-    return tokens
+
 
 # def get_original_token(text, mapping):
 #     # Tokenize the input text
@@ -321,7 +253,6 @@ def get_root_word(word):
 
     #noemalize
     cleaned_word = normalize_text(cleaned_word)
-    cleaned_word = dediac_ar(cleaned_word)
 
     #lemmatized
     analyses = analyzer.analyze(word)
@@ -332,7 +263,7 @@ def get_root_word(word):
         # Handle the case where no analysis was found
         cleaned_word = cleaned_word  # Or any fallback mechanism you prefer
 
-
+    #again after le mitze it
     cleaned_word = normalize_text(cleaned_word)
     cleaned_word = dediac_ar(cleaned_word)
     
@@ -344,7 +275,7 @@ def extract_aspect_data(generated_text):
 
     aspect_data_list = []
 
-    # Regular expression to match each aspect object, focusing on "phrases"
+    # Regular expression to match each aspect object, starting from the last data in object (opinions) and go up until (aspect) to make sure it's a completed object
     pattern = r'\{\s*"aspect":\s*[^{}]*"opinions":\s*\[[^\]]*\]\s*\}'
     
     # Find all matches
@@ -356,3 +287,26 @@ def extract_aspect_data(generated_text):
         aspect_data_to_save = json.loads(aspect_data)
         aspect_data_list.append(aspect_data_to_save)
     return aspect_data_list
+
+
+
+def clean_result(input_value):
+    # Function to remove undesired substrings
+    def remove_undesired(text):
+        cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
+        cleaned_text = re.sub(r"NOT_", "", cleaned_text)  # Remove "Place_"
+        cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
+        cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)
+        return cleaned_text.strip()
+    
+    # Check if the input is a list (array)
+    if isinstance(input_value, list):
+        # Apply the cleaning function to each element in the list
+        return [remove_undesired(item) for item in input_value if isinstance(item, str)]
+    
+    # If the input is a single string, clean it directly
+    elif isinstance(input_value, str):
+        return remove_undesired(input_value)
+    
+    # Return None or input as-is if it's neither string nor list
+    return input_value

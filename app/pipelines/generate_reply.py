@@ -38,6 +38,8 @@ def generate_reply(review_id):
         return f"Business with id {review['business_id']} not found."
 
     try:
+        # For RAG data, we included reviews that had received responses from the owner, combining them in the dataset 
+        # to better simulate the owner's style and wording when generating a reply.        
         retriever = VectorStoreCache.get_retriever("generate_reply")
     except Exception as e:
         print("Error while retrieving VectorStoreCache:", e)
@@ -70,6 +72,7 @@ def generate_reply(review_id):
     # Generate the response
     response = qa.run(prompt_template)
 
+    #clean result text
     pattern = r"\b(?:[Oo]utput|[Aa]nswer|Example_END|[Cc]orrected\s[tT]ext):?\s*"
     # Substitute the pattern with an empty string
     cleaned_text = re.sub(pattern, "", response).strip()
@@ -117,11 +120,10 @@ def generate_reply(review_id):
 
 #     return response
 
-
+# Correct any spelling or grammatical errors in the user's text.
 def correct_reply(reply_text):
     reply_text = reply_text.strip()  # Clean up extra spaces and line breaks
 
-    # Prepare the prompt for response generation
     prompt_template = f"""
     Correct the following text by checking for any grammar or spelling errors:
      - The reply must be at the same language as the input_reply.
@@ -145,6 +147,5 @@ def correct_reply(reply_text):
     # Substitute the pattern with an empty string
     cleaned_text = re.sub(pattern, "", response).strip()
 
-    # Strip any extra whitespace or newlines from the response
     return cleaned_text
 

@@ -28,17 +28,15 @@ def extract_google_id(long_url):
         return None
 
 def process_url(url):
+    #extract google id from long url
     if is_short_url(url):
         google_id = ""
         long_url = expand_short_url(url)
         if long_url:
-            print("Expanded URL:", long_url)
             google_id = extract_google_id(long_url)
-            if google_id:
-                print("Google ID:", google_id)
+
     else:
-        print("Processing long URL...")
+        #extract google id from the long url
         google_id = extract_google_id(url)
-        if google_id:
-            print("Google ID:", google_id)
+
     return google_id

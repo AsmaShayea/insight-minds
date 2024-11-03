@@ -201,19 +201,20 @@ def augment(prompt_template, review_text):
 # Save apects for each review to DB
 def save_aspects_data(reviews, business_id):
     count = 0
-    categpries_list = "(Price, Product, Service, Staff, Place)"
-    print("123")
+
     for review in reviews:
         count = count + 1
-        print(count)
+
         review_txt = review['review_text']
         review_id = review['review_id']
         existing_aspect_review = aspects_collection.find_one({"review_id": review_id})
         # is_review_analyzed = "false"
-        print("1234")
+
         if not existing_aspect_review:
             print(review_id)
             print(review_txt)
+
+            #preproces review text, with keep the original to show them later
             cleaned_review, token_mapping = preprocess_arabic_text(review_txt)
 
             llm_model = ModelSingleton.get_model()
@@ -224,8 +225,10 @@ def save_aspects_data(reviews, business_id):
             print(generated_text)
             print('---')
             try:
+                #extract the json format or aspect json from array to save it in DB
                 aspect_data_list = extract_aspect_data(generated_text)
                 for aspect in aspect_data_list:
+                    #get the aspect word as it was before preprocessing data
                     aspect_value = get_original_token(aspect["aspect"], token_mapping)
                     print("old",aspect["aspect"])
                     print("new",aspect_value)
@@ -239,6 +242,7 @@ def save_aspects_data(reviews, business_id):
                     elif aspect["polarity"] == "محايد":
                         polarity = "neutral"
 
+                    #lemmitize the aspec ans save it to DB - this wil enable us to group the same aspects based on its root word
                     root_aspect = get_root_word(aspect_value)
                     existing_aspects = aspects_collection.find_one({
                         "root_aspect": root_aspect,
@@ -256,7 +260,7 @@ def save_aspects_data(reviews, business_id):
                             # "category": aspect["category"],
                             "opinions": clean_result(aspect["opinions"]),
                         }
-                        
+                        #insert aspect data to DB
                         aspect_id = aspects_collection.insert_one(aspect_data).inserted_id
                         print(f"Added review with review_id {aspect_id} to the database.")
 
@@ -267,7 +271,9 @@ def save_aspects_data(reviews, business_id):
             except json.JSONDecodeError as e:
                 print(review['review_id'])
                 existing_error_review = errors_log_collection.find_one({"review_id": review_id})
-        
+
+                ##any error in getting or ectracting json forma or sav data to DB, we will save the error information in DB
+                # This will enable us to review and figure it out the cases to handle it and improve the model response
                 if not existing_error_review:
                     error_data = {
                         "review_id": review_id,
@@ -281,10 +287,11 @@ def save_aspects_data(reviews, business_id):
         else:
             print('done')
 
-        
+        # save review text with put aspect in colored tags red or green
         review_aspects_text = handele_reviews_asepct_tags(review)
+        # split words in review, to will enable user to select the corrected aspect if the model retrieve a wrong one
         tokenized_review = wrap_words_with_span(review_txt)
-        print("prev_set not done")
+
         reviews_collection.update_one(
         {"review_id": review_id},
         {
@@ -295,9 +302,9 @@ def save_aspects_data(reviews, business_id):
             }
         }
         )
-        print("prev_set done")
 
-    #generate_insights_text(business_id)
+    #generate text insight for each business after extracting all aspects
+    generate_insights_text(business_id)
 
     business_collection.update_one(
         {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
@@ -314,7 +321,6 @@ def handele_reviews_asepct_tags(review):
     
     for aspect in aspects:
         aspect_str = aspect['aspect']
-        # polarity_score = aspect['polarity_score']
         polarity = aspect['polarity']
 
         # Color-code the aspects
@@ -334,16 +340,13 @@ def handele_reviews_asepct_tags(review):
 
 def extract_save_aspects(business_id, google_id):
 
-    # If `google_id` or `url` is provided, attempt to retrieve or create a new business ID
+    
     scrape_reviews(business_id, google_id)
     
-    print("hi2 bbbbbbbbb")
     reviews = reviews_collection.find({"business_id": business_id})
 
-    print("hi3 ccccc")
+    #analyze reviews to extract aspects and other data
     save_aspects_data(reviews, business_id)
-
-    print("hi4 dddddd")
 
 
 

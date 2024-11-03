@@ -8,49 +8,7 @@ import re
 from datetime import datetime
 from app.vector_store_cache import VectorStoreCache
 
-# # Get the most common positive and negative aspects separately, along with their sentiment and associated reviews
-# def get_common_aspects_and_reviews():
-#     aspects_collection = get_database()['aspects']
-#     # Step 1: Find aspects that are repeated more than 3 times, grouped by aspect, root_aspect, and polarity
-#     pipeline = [
-#         {"$group": {
-#             "_id": {"aspect": "$aspect", "root_aspect": "$root_aspect", "polarity": "$polarity"},  # Group by aspect, root_aspect, and polarity
-#             "count": {"$sum": 1},  # Count occurrences
-#             "all_opinions": {"$push": "$opinions"}  # Collect associated opinions into an array
-#         }},
-#         {"$match": {"count": {"$gt": 3}}},  # Keep only aspects mentioned more than 3 times
-#         {"$sort": {"count": -1}}  # Sort by count in descending order
-#     ]
-    
-#     common_aspects = list(aspects_collection.aggregate(pipeline))
-    
-#     return common_aspects
 
-# # Step 3: Retrieve the reviews for these aspects
-# def process_aspects():
-#     common_aspects = get_common_aspects_and_reviews()
-#     positive_aspects = [entry for entry in common_aspects if entry['_id']['polarity'] == 'positive'][:3]  # Top 3 positive aspects
-#     negative_aspects = [entry for entry in common_aspects if entry['_id']['polarity'] == 'negative'][:3]  # Top 3 negative aspects
-
-#     retrieved_data = []
-#     for aspect_entry in positive_aspects + negative_aspects:
-#         aspect = aspect_entry['_id']['aspect']
-#         root_aspect = aspect_entry['_id']['root_aspect']  # Retrieve root_aspect
-#         sentiment = aspect_entry['_id']['polarity']
-#         all_opinions = aspect_entry['all_opinions']  # Get all collected opinions arrays
-        
-#         # Flatten the list of lists for opinions (since opinions are stored as arrays within arrays)
-#         flattened_opinions = [opinion for sublist in all_opinions for opinion in sublist]
-        
-#         # Add to the final retrieved data structure
-#         retrieved_data.append({
-#             'aspect': aspect,
-#             'root_aspect': root_aspect,
-#             'sentiment': sentiment,
-#             'count': aspect_entry['count'],  # Add the count of the aspect
-#             'all_opinions': flattened_opinions,  # Store all consolidated opinions in the final structure
-#         })
-#     return retrieved_data
 
 # Prepare summary prompt based on retrieved data
 def prepare_summary_prompt(business_id):
@@ -75,17 +33,7 @@ def prepare_summary_prompt(business_id):
   
     return prompt_template
 
-# # Setup the embeddings and vector store for the summary task
-# def setup_summary_vector_store():
-#     retrieved_data = process_aspects()
 
-#     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/LaBSE")
-#     documents = [
-#         f"Aspect: {data['aspect']}\nSentiment: {data['sentiment']}\nOpinions: {', '.join(data['all_opinions'])}" 
-#         for data in retrieved_data
-#     ]
-#     vector_store = Chroma.from_texts(documents, embeddings)
-#     return vector_store
 
 # Generate insights text from the processed aspects
 # Define regex patterns to extract sections
@@ -93,24 +41,20 @@ summary_pattern = r"الملخص:\n\n(.*?)\n\n2- توصيات"
 recommendations_pattern = r"2- توصيات:\n\n(.*?)\n\n3- أفكار"
 ideas_pattern = r"3- أفكار:\n\n(.*)"
 
+
+#we used the reviews of most common aspect negative and positive
+# To generate text summary of insight and recommendation
 def generate_insights_text(business_id):
-    # Get your response data (assuming response is already defined here)
-        # # Create the vector store from the retrieved data
-    # summary_vector_store = setup_summary_vector_store()
-    # retriever = summary_vector_store.as_retriever()
-    print("start prompt summary00") 
-    # Prepare summary prompt using retrieved data
+
     summary_prompt = prepare_summary_prompt(business_id)
 
     # Use the cached retriever
+    #we used the reviews of most common aspect negative and positive and also suggest ideas to improve their business
     retriever = VectorStoreCache.get_retriever("text_summary")
-
-    print("start prompt summary11")
 
     # Initialize the RetrievalQA chain
     qa = RetrievalQA.from_chain_type(llm=ModelSingleton.get_instance(), chain_type="stuff", retriever=retriever)
 
-    print("start prompt summary22")
 
     # Run the query and get insights
     response = qa.run(summary_prompt)
@@ -120,7 +64,6 @@ def generate_insights_text(business_id):
     recommendations_match = re.search(recommendations_pattern, response, re.DOTALL)
     ideas_match = re.search(ideas_pattern, response, re.DOTALL)
 
-    print("start prompt summary33")
     # Ensure sections are not empty
     if (summary_match and summary_match.group(1).strip()) or \
        (recommendations_match and recommendations_match.group(1).strip()) or \
@@ -159,26 +102,3 @@ def generate_insights_text(business_id):
         print("No valid data found to insert.")
     
 
-    print("start prompt summary 44")
-    # # Create JSON object with catchy headings
-    # extracted_data = {
-    #     "summary": f"""
-    #         <h3><strong>تجربة العملاء: تقييم شامل لنمط نمق كافيه</strong></h3>
-    #         {extracted_data['summary'].replace('\n', '<br>')}
-    #     """,
-    #     "recommendations": f"""
-    #         <h3><strong>تحسينات مقترحة: خطوات لتعزيز تجربة العملاء في نمق كافيه</strong></h3>
-    #         {extracted_data['recommendations'].replace('\n', '<br>')}
-    #     """,
-    #     "ideas": f"""
-    #         <h3><strong>أفكار مبتكرة: كيف يمكن أن نجذب المزيد من الزبائن إلى نمق كافيه؟</strong></h3>
-    #         {extracted_data['ideas'].replace('\n', '<br>')}
-    #     """
-    # }
-    # Return the response as JSON-compatible dictionary
-    # return {
-    # "insights_id": insights_id_str,
-    # "business_id": business_id,
-    # "data": extracted_data,
-    # "extraction_date": current_datetime
-    # }
