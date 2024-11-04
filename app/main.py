@@ -253,7 +253,8 @@ def get_reviews(business_id: str):
         return {"error": business_id}
     
     # Get reviews for the business (limit to 50 reviews - for test)
-    reviews = list(reviews_collection.find({"business_id": business_id}))
+    reviews = list(reviews_collection.find({"business_id": business_id}).limit(50))
+    print(f"Number of reviews fetched: {len(reviews)}")
 
     positive_reviews = []
     negative_reviews = []
@@ -314,9 +315,9 @@ def get_reviews(business_id: str):
         "status": 200,
         "message": "Request successful",
         "data": {
-            "positive_reviews": positive_reviews[:10],  # Max 10 positive reviews
-            "negative_reviews": negative_reviews[:10],  # Max 10 negative reviews
-            "neutral_reviews": neutral_reviews[:10]     # Max 10 neutral reviews
+            "positive_reviews": positive_reviews,  # Max 10 positive reviews
+            "negative_reviews": negative_reviews,  # Max 10 negative reviews
+            "neutral_reviews": neutral_reviews     # Max 10 neutral reviews
         }
     })
     return result
