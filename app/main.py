@@ -253,7 +253,7 @@ def get_reviews(business_id: str):
         return {"error": business_id}
     
     # Get reviews for the business (limit to 50 reviews - for test)
-    reviews = list(reviews_collection.find({"business_id": business_id}).limit(50))
+    reviews = list(reviews_collection.find({"business_id": business_id}))
 
     positive_reviews = []
     negative_reviews = []
