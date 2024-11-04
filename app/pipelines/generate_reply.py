@@ -56,7 +56,7 @@ def generate_reply(review_id):
         - The reply must be a maximum of 200 characters, you can increase it to 300 if there is very important issues need to calrify.
         - Reply in the same language as the review, and do not include or translate any other language.
         - Avoid repeating client phrases or adding filler content.
-        - Do not mention the aspects writtten in the review or what they like unless it is an issue need to be handles, just brief in overall.
+        - Do not mention the aspects writtten in the review, just brief in overall.
         - Do not add any hashtag or mention
         - Follow the output of the example below.
 
@@ -64,7 +64,7 @@ def generate_reply(review_id):
         input: نجمتين لاني فعلا احب قهوتهم خصوصا الفلات وايت وساندوتش الحلومي اللي عندهم ودايم اطلب منهم عن طريق احد تطبيقات التوصيل رغم كثرة الكافيهات القريبه حولي بالدمام … ولكن الطلب الاخير وصلني بطريقه بشعه جدا ماتوقعتها منهم ولا اتوقع انها ترضي ادارة كافيه محترم له سمعته … اين ادارة الجوده … الساندوتش وصلني يابس و محروق واضح بالصور رغم محاولات ازاله الطبقه المحروقه والقهوه وصلت والغطا مش نظيف مشروبي فلات وايت ولا اعلم سبب وجود هذا السائل الاحمر ؟؟!!! … اتمنى من الاداره اتخاذ الاجراءات اللازمه لعدم تكرار هذا مع زبائن اخرين
         output: نحن نقدر تقييمك ونأسف اذا لم تكن راضياً بشكل كامل، سنعمل جاهدين على تحسين خدماتنا. 
 
-        Now generate a short response for the following review:
+        Now generate a short breif response for the following review:
         {review['review_text']}
         """
 
