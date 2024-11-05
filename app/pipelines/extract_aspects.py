@@ -311,14 +311,16 @@ def save_aspects_data(reviews, business_id):
             }
         }
         )
+    
 
-    #generate text insight for each business after extracting all aspects
-    generate_insights_text(business_id)
 
     business_collection.update_one(
         {"_id": ObjectId(business_id)},  # Filter by _id or use other unique field
         {"$set": {"progress_status": "completed"}}  # Set the new progress status
     )
+
+        #generate text insight for each business after extracting all aspects
+    generate_insights_text(business_id)
 
     print("done")
 

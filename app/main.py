@@ -334,6 +334,7 @@ def get_reviews(business_id: str):
 async def get_reply(review_id: str):
     try:
         reply, review = generate_reply(review_id)
+        
         if reply:
             return {
                 "review": review,
