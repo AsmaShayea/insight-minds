@@ -384,9 +384,9 @@ async def generate_insights(business_id: str):
 
     # Format the response with headings
     extracted_data = {
-        "summary": "<h3 class='text-[20px] text-black leading-[27px] font-medium'><strong>ملخص تجربة العملاء</strong></h3>" + insights['data']['summary'].strip().replace('\n', '<br>'),
-        "recommendations": "<h3 class='text-[20px] text-black leading-[27px] font-medium'><strong>توصيات</strong></h3>" + insights['data']['recommendations'].strip().replace('\n', '<br>'),
-        "ideas": "<h3 class='text-[20px] text-black leading-[27px] font-medium'><strong>أفكار مبتكرة</strong></h3>" + insights['data']['ideas'].strip().replace('\n', '<br>')
+        "summary": "<h3 class='text-[20px] text-black leading-[27px] font-medium pb-2'><strong>ملخص تجربة العملاء</strong></h3>" + insights['data']['summary'].strip().replace('\n', '<br>'),
+        "recommendations": "<h3 class='text-[20px] text-black leading-[27px] font-medium pb-2'><strong>توصيات</strong></h3>" + insights['data']['recommendations'].strip().replace('\n', '<br>'),
+        "ideas": "<h3 class='text-[20px] text-black leading-[27px] font-medium pb-2'><strong>أفكار مبتكرة</strong></h3>" + insights['data']['ideas'].strip().replace('\n', '<br>')
     }
 
     # Return the response with insights_id and business_id
