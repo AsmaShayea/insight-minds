@@ -196,9 +196,14 @@ def business_loading_status(business_id: str):
             else:
                 progress_percentage = 0
 
-            progress_status = "in_progress"
-            progress_message =  "data in progress and please chaek later"
-            progress_percentage = progress_percentage
+            if(progress_percentage == 100):
+                progress_status = "active"
+                progress_message =  "Request successful"
+                progress_percentage = 100
+            else:    
+                progress_status = "in_progress"
+                progress_message =  "data in progress and please chaek later"
+                progress_percentage = progress_percentage
 
     return progress_status, progress_message, progress_percentage
 
@@ -315,9 +320,9 @@ def get_reviews(business_id: str):
         "status": 200,
         "message": "Request successful",
         "data": {
-            "positive_reviews": positive_reviews,  # Max 10 positive reviews
-            "negative_reviews": negative_reviews,  # Max 10 negative reviews
-            "neutral_reviews": neutral_reviews     # Max 10 neutral reviews
+            "positive_reviews": positive_reviews, 
+            "negative_reviews": negative_reviews,  
+            "neutral_reviews": neutral_reviews     
         }
     })
     return result
