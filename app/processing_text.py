@@ -294,19 +294,26 @@ def clean_result(input_value):
     # Function to remove undesired substrings
     def remove_undesired(text):
         cleaned_text = re.sub(r"Place_", "", text)  # Remove "Place_"
-        cleaned_text = re.sub(r"NOT_", "", cleaned_text)  # Remove "Place_"
+        cleaned_text = re.sub(r"NOT_", "", cleaned_text)  # Remove "NOT_"
         cleaned_text = cleaned_text.replace("_", " ")  # Replace remaining underscores with spaces
-        cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)
-        return cleaned_text.strip()
+        cleaned_text = re.sub(r'[.,،؛:;"\'؛:]', '', cleaned_text)  # Remove punctuation
+        return cleaned_text.strip()  # Ensure no leading/trailing spaces
+    
+    # Debug print statements to check cleaning
+    print(f"Original: {input_value}")
     
     # Check if the input is a list (array)
     if isinstance(input_value, list):
         # Apply the cleaning function to each element in the list
-        return [remove_undesired(item) for item in input_value if isinstance(item, str)]
+        result = [remove_undesired(item) for item in input_value if isinstance(item, str)]
+        print(f"Cleaned list: {result}")
+        return result
     
     # If the input is a single string, clean it directly
     elif isinstance(input_value, str):
-        return remove_undesired(input_value)
+        result = remove_undesired(input_value)
+        print(f"Cleaned string: {result}")
+        return result
     
     # Return None or input as-is if it's neither string nor list
     return input_value

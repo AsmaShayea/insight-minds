@@ -37,9 +37,12 @@ def prepare_summary_prompt(business_id):
 
 # Generate insights text from the processed aspects
 # Define regex patterns to extract sections
-summary_pattern = r"الملخص:\n\n(.*?)\n\n2- توصيات"
-recommendations_pattern = r"2- توصيات:\n\n(.*?)\n\n3- أفكار"
-ideas_pattern = r"3- أفكار:\n\n(.*)"
+# summary_pattern = r"الملخص:\n\n(.*?)\n\n2- توصيات"
+# recommendations_pattern = r"2- توصيات:\n\n(.*?)\n\n3- أفكار"
+# ideas_pattern = r"3- أفكار:\n\n(.*)"
+summary_pattern = r"1-\s*الملخص:(.*?)(?:2-\s*توصيات:|3-\s*أفكار:|$)"
+recommendations_pattern = r"2-\s*توصيات:(.*?)(?:1-\s*الملخص:|3-\s*أفكار:|$)"
+ideas_pattern = r"3-\s*أفكار:(.*?)(?:1-\s*الملخص:|2-\s*توصيات:|$)"
 
 
 #we used the reviews of most common aspect negative and positive
@@ -63,11 +66,14 @@ def generate_insights_text(business_id):
     summary_match = re.search(summary_pattern, response, re.DOTALL)
     recommendations_match = re.search(recommendations_pattern, response, re.DOTALL)
     ideas_match = re.search(ideas_pattern, response, re.DOTALL)
+    print("0000000")
 
     # Ensure sections are not empty
     if (summary_match and summary_match.group(1).strip()) or \
        (recommendations_match and recommendations_match.group(1).strip()) or \
        (ideas_match and ideas_match.group(1).strip()):
+        
+        print("11111111111111")
         
         # Format extracted data with <br> tags replacing newline characters
         extracted_data = {
@@ -84,12 +90,15 @@ def generate_insights_text(business_id):
             "extraction_date": current_datetime,
         }
 
+        print("22222222222")
+
         try:
             insights_collection = get_database()['insights']
-            
+            print("4444444444", insights_collection)
+
             # Insert the data and retrieve the generated _id
             insights_id = insights_collection.insert_one(insights_data).inserted_id
-            
+            print("33333333333", insights_id)
             # Ensure the insights_id was created successfully
             if insights_id is None:
                 print("Insertion failed, no ID returned.")
