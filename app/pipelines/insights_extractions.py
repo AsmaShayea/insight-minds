@@ -20,7 +20,7 @@ def prepare_summary_prompt(business_id):
 
     # Prepare the prompt template
     prompt_template = f"""You are a Customer Experience Analyst. Based on the user opinions and aspects about a business, You will provide in Arabic language:
-        1- الملخص: Start by summarizing both the positive and negative feedback from the user review about the business in overall without mention it as points. Mention in overall what people liked, disliked and how these opinions reflect the overall customer experience.
+        1- الملخص: Give an overview about the customer feedback from the user review for the business in overall. Just shortly to reflect the overall customer experience.
         2- توصيات: Provide practical recommendations based on positive and negative aspects in overall that could help enhance service and customer experience, focusing on tangible improvements.
         3- أفكار: Suggest new innovative and unique ideas to strengthen the business's position and attract more customers, highlighting new aspects that could be explored with avoiding repeated suggestions.
 

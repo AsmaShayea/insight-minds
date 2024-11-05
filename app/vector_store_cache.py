@@ -113,7 +113,7 @@ class VectorStoreCache:
                 "count": {"$sum": 1},
                 "all_opinions": {"$push": "$opinions"}
             }},
-            {"$match": {"count": {"$gt": 3}}},
+            {"$match": {"count": {"$gt": 1}}},
             {"$sort": {"count": -1}}
         ]
         return list(aspects_collection.aggregate(pipeline))
