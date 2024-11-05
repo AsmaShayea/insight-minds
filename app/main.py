@@ -178,32 +178,32 @@ def business_loading_status(business_id: str):
     else:
         status = task_status.get(business_id, "not found")
 
-        if(status == "failed"):
+        # if(status == "failed"):
 
-            progress_status = "error"
-            progress_message =  "Task stopped for unrecognized error"
+        #     progress_status = "error"
+        #     progress_message =  "Task stopped for unrecognized error"
+        #     progress_percentage = 0
+
+        # else:
+        # Check if the task is completed
+        total_reviews = reviews_collection.count_documents({"business_id": business_id})
+        analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
+    
+
+        # Extracting the results
+        if total_reviews > 0:
+            progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
+        else:
             progress_percentage = 0
 
-        else:
-            # Check if the task is completed
-            total_reviews = reviews_collection.count_documents({"business_id": business_id})
-            analyzed_reviews = reviews_collection.count_documents({"business_id": business_id,"is_analyzed": "true"})
-        
-
-            # Extracting the results
-            if total_reviews > 0:
-                progress_percentage = math.floor((analyzed_reviews / total_reviews) * 100)
-            else:
-                progress_percentage = 0
-
-            if(progress_percentage == 100):
-                progress_status = "active"
-                progress_message =  "Request successful"
-                progress_percentage = 100
-            else:    
-                progress_status = "in_progress"
-                progress_message =  "data in progress and please chaek later"
-                progress_percentage = progress_percentage
+        if(progress_percentage == 100):
+            progress_status = "active"
+            progress_message =  "Request successful"
+            progress_percentage = 100
+        else:    
+            progress_status = "in_progress"
+            progress_message =  "data in progress and please chaek later"
+            progress_percentage = progress_percentage
 
     return progress_status, progress_message, progress_percentage
 
@@ -353,7 +353,6 @@ class ReplyRequest(BaseModel):
     
 @app.post("/correct-reply")
 async def correct_reply_endpoint(request: ReplyRequest):
-    """Endpoint to correct a business owner's reply."""
     corrected_reply = correct_reply(request.reply_text)  # Access reply_text from the Pydantic model
     return {"corrected_reply": corrected_reply}
 #### Sixth API (Correct current review) End
@@ -362,9 +361,6 @@ async def correct_reply_endpoint(request: ReplyRequest):
 #### Seventh API (Get Text Summary insights, recommendation, ideas) Started
 @app.get("/generate-text-insights/{business_id}")
 async def generate_insights(business_id: str):
-    """
-    Endpoint to run the pipeline for generating business insights.
-    """
     insights_collection = get_database()['insights']  # Ensure this references the correct collection
 
     # Fetch the insights document if it is already exists
